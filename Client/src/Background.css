@@ -1,0 +1,16 @@
+.root{
+    -fx-background-color: #c2cbe0;
+    -fx-font-size: 11pt;
+}
+
+
+#fancytext {
+    -fx-font: 20px Calibri;
+    -fx-fill: linear-gradient(from 0% 0% to 10% 20%, repeat, whitesmoke 10%, red 50%);
+    -fx-stroke: Blue;
+    -fx-stroke-width: 1;
+}
+
+#italic {
+    -fx-font-style: italic;
+}
