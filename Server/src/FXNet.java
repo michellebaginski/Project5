@@ -11,7 +11,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import sun.nio.ch.Net;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +23,8 @@ public class FXNet extends Application {
     private TextArea messages = new TextArea();
     private boolean gameStarted = false;
     private int questionNum = 1;
+    
+    private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
 
     // create the contents of the server GUI
     private Parent createContent() {
@@ -107,6 +108,17 @@ public class FXNet extends Application {
                 root.getChildren().add(playBox);
                 clientsConnected.setText("Number of clients connected: " + conn.numClients + "\n");
                 clientsConnected.setPadding(new Insets(5, 5, 5, 5));
+                
+                ReadTxtFile extractQs = new ReadTxtFile();
+                extractQs.openFile();
+                extractQs.readFile();
+                extractQs.closeFile();
+                randQtns = extractQs.getTriviaQnsHashMap();
+
+                //DOUBLE CHECKING HASHMAP TO CHECK IF IT WORKED, REMOVE LATER. FOR SAEMA'S REFERENCE
+                for (HashMap.Entry<Integer,String> entry : randQtns.entrySet()) {
+                    System.out.println("Key: " + entry.getKey() + " Question: " + entry.getValue());
+                }
             }
             catch (Exception e){
                 srvOn.setDisable(true);
@@ -191,16 +203,6 @@ public class FXNet extends Application {
                         else{
                             // the name is taken
                             conn.send("Username not approved", conn.threadID);
-                        }
-                    }
-
-                    //Unfinished: sending questions to all the clients
-                    if (gameStarted) {
-                        while (questionNum < 11) {
-                            for (int i=0; i<2; i++) {
-                                conn.send("Question " + questionNum, i);
-                            }
-                            questionNum++;
                         }
                     }
 
