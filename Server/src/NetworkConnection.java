@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
-public abstract class NetworkConnection {
+public abstract class NetworkConnection extends FXNet {
 
     private ConnThread connthread = new ConnThread();
     private Consumer<Serializable> callback;
@@ -20,6 +20,14 @@ public abstract class NetworkConnection {
 
     public String getSenderUsername(){
         return this.threads.get(threadID).clientUsername;
+    }
+
+    public String getOpponentUsername(){
+        return this.threads.get(threadID).opponentUsername;
+    }
+
+    public void setOpponentUsername(String name){
+        this.threads.get(threadID).opponentUsername = name;
     }
 
     // constructor
@@ -54,6 +62,7 @@ public abstract class NetworkConnection {
         }
     }
 
+
     abstract protected int getPort();
 
     // nested class that creates a server socket and makes it listen for client connections
@@ -62,18 +71,20 @@ public abstract class NetworkConnection {
         public void run() {
             try(ServerSocket server = new ServerSocket(getPort())){
                 System.out.println("Server created with port number: " + getPort());
-
-                // server is on and is listening for client connections and it will stop listening once 4 clients are connected
-                int i = 0;
-                while(i < 4){
+                // server is on and is listening for client connections
+                while(true) {
                     ClientThread t1 = new ClientThread(server.accept());
                     threads.add(t1);
                     numClients++;
                     this.serverSocket = server;
+                    if (threads.size() == 4) {
+                        for (int i=0; i<4; i++) {
+
+                        }
+                    }
                     t1.setDaemon(true);
                     t1.start();
                     t1.setName(Integer.toString(numClients-1));
-                    i++;
                 }
 
             } catch (Exception e) {
@@ -96,8 +107,6 @@ public abstract class NetworkConnection {
         private ObjectOutputStream out;
         String clientUsername;
         String opponentUsername;
-
-
         // variable to check if the player is free to challenge or occupied in a game
         boolean isAvailable;
 
