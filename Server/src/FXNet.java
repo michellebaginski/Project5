@@ -34,6 +34,8 @@ public class FXNet extends Application {
         // Hbox for clients connected and PLAY
         HBox playBox = new HBox();
         playBox.setSpacing(65);
+        messages.setPrefHeight(60);
+        messages.setEditable(false);
 
         Label greetLabel = new Label("Welcome to the Trivia Game!");
         Label instLabel = new Label("Here's how to play: ");
