@@ -63,6 +63,7 @@ public class FXNet extends Application{
         // declare and initialize a root
         VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
         root.setPrefSize(600, 600);
+        root.getStylesheets().add("Background.css");
 
         // event handler for port number textField
         portField.setOnAction(event -> {
