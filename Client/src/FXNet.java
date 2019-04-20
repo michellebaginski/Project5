@@ -267,6 +267,13 @@ public class FXNet extends Application{
                     messages.appendText(input +" has joined the game.\n");
                     numPlayersOnline++;
                 }
+                // receive a new question from the server
+                else if (input.length() >= 10 && input.substring(0,10).equals("Question: ")) {
+                    input = input.substring(10,input.length());
+                    correctAnswer = triviaQs.get(input).get(0);
+                    System.out.println("QUESTION RECEIVED: " + input);
+                    System.out.println("CORRECT ANSWER: " + correctAnswer);
+                }
                 
                 //Not needed since when the username is approved, the current scene gets modified for the gameplay scene.
                 //It had issues when the last client would type in a taken username, the scene would change before the client is 
@@ -285,13 +292,6 @@ public class FXNet extends Application{
                     stage.setScene(new Scene(f));
                     stage.show(); 
                 } */
-
-                // receive a new question from the server
-                if (input.length() >= 10 && input.equals("Question: ")) {
-                    input = input.substring(10);
-                    correctAnswer = triviaQs.get(input).get(0);
-                    System.out.println("QUESTION RECEIVED");
-                }
 
             });
         });
