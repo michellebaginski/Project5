@@ -196,9 +196,6 @@ public class FXNet extends Application{
                 if(playerAnswer.equals(correctAnswer)){
                     conn.send("Score: 1" );
                 }
-                else{
-                    conn.send("Score: 0" );
-                }
             }
             catch (Exception e){
                 System.out.println("Some shit went wrong");
@@ -290,7 +287,7 @@ public class FXNet extends Application{
                 } */
 
                 // receive a new question from the server
-                if (input.length()== 10 && input.contains("Question: ")) {
+                if (input.length()== 10 && input.equals("Question: ")) {
                     input = input.substring(10);
                     correctAnswer = triviaQs.get(input).get(0);
                     System.out.println("QUESTION RECEIVED");
