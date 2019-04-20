@@ -287,7 +287,7 @@ public class FXNet extends Application{
                 } */
 
                 // receive a new question from the server
-                if (input.length()== 10 && input.equals("Question: ")) {
+                if (input.length() >= 10 && input.equals("Question: ")) {
                     input = input.substring(10);
                     correctAnswer = triviaQs.get(input).get(0);
                     System.out.println("QUESTION RECEIVED");
