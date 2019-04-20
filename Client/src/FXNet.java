@@ -254,6 +254,7 @@ public class FXNet extends Application{
                     HBox f = new HBox();
                     f.setPrefSize(600, 600);
                     Label l = new Label("GAME SCREEN");
+                    f.getStylesheets().add("Background.css");
                     f.getChildren().addAll(l);
                     stage.setScene(new Scene(f));
                     stage.show();
