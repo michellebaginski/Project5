@@ -5,12 +5,12 @@ import java.io.*;
 
 public class ReadTxtFile{
 
-    private HashMap<String, ArrayList<String>> triviaQns = new HashMap<String, ArrayList<String>>();
+    private HashMap<Integer, String> triviaQns = new HashMap<Integer, String>();
     private Scanner x;
     private String filename = "src/questions.txt";
 
     //return the private hashmap
-    public HashMap<String,ArrayList<String>> getTriviaQnsHashMap(){
+    public HashMap<Integer,String> getTriviaQnsHashMap(){
         return this.triviaQns;
     }
 
@@ -24,23 +24,18 @@ public class ReadTxtFile{
         }
     }
 
-    //Create an instance of an ArrayList and add multiple choice answers to the ArrayList and return the lsit
-    public ArrayList<String> getMCAnswers(){
-        ArrayList<String> multiAnswers = new ArrayList<>();
-        String answer;
-        for (int i = 0; i < 3; i++){
-            answer = x.nextLine();
-            multiAnswers.add(answer);
-        }
-        return multiAnswers;
-    }
 
     //Create a function to traverse the text file and extract the questions and answers and insert into a hashmap
     public void readFile(){
+        int i = 1;
         while( x.hasNext()){
             String key = x.nextLine();
-            ArrayList<String> multiAnswers = getMCAnswers();
-            triviaQns.put(key,multiAnswers);
+            triviaQns.put(i,key);
+            i++;
+            //Skip the answers multiple choice answers
+            for(int j = 0; j < 3; j++){
+                x.nextLine();
+            }
         }
     }
 
