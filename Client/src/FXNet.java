@@ -30,17 +30,18 @@ public class FXNet extends Application{
     private Stage stage;
 
     HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
+    private String correctAnswer; //store the correct answer to the current trivia question
 
 
     // variables to hold player and opponent game information
     private String usernameApproved = "";
-    private String username, oppUsername;
+    private String username;
 
     // declare and initialize needed GUI components
     private TextArea messages = new TextArea();
-    private Button showPlayers = new Button("Show Players Online");
-    private Button back = new Button("Back");
     private Button helperBtn = new Button();
+    
+   
 
 
 
@@ -186,6 +187,25 @@ public class FXNet extends Application{
         usernameField.setOnAction(usernameFieldEvent);
         // helper button used for username error checking
         helperBtn.setOnAction(usernameFieldEvent);
+        
+        // generic event handler to know which button the client pressed
+        EventHandler<ActionEvent> triviaBtn = event ->{
+           Button b = (Button) event.getSource();
+            String playerAnswer = b.getText();
+            try{
+                if(playerAnswer.equals(correctAnswer)){
+                    conn.send("Score: 1" );
+                }
+                else{
+                    conn.send("Score: 0" );
+                }
+            }
+            catch (Exception e){
+                System.out.println("Some shit went wrong");
+                e.printStackTrace();
+            }
+        };
+        
         return root;
     }
 
@@ -270,7 +290,9 @@ public class FXNet extends Application{
                 } */
 
                 // receive a new question from the server
-                if (input.length()== 10 && input.contains("Question")) {
+                if (input.length()== 10 && input.contains("Question: ")) {
+                    input = input.substring(10);
+                    correctAnswer = triviaQs.get(input).get(0);
                     System.out.println("QUESTION RECEIVED");
                 }
 
