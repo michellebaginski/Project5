@@ -95,6 +95,7 @@ public abstract class NetworkConnection {
         private Socket clientSocket;
         private ObjectOutputStream out;
         String clientUsername;
+        int score;
 
 
         // variable to check if the player is free to challenge or occupied in a game
