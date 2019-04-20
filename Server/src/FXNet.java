@@ -220,6 +220,11 @@ public class FXNet extends Application {
                             }
                             gameStarted = true;
                         }
+                        else if(input.length() >= 7 && input.equals("Score: ")){
+                            if(input.substring(7).equals("1")){
+                                conn.threads.get(conn.threadID).score++; //increment the user's score
+                            }
+                        }
                     }
                 });
             }
