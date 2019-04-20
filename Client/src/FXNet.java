@@ -24,7 +24,6 @@ public class FXNet extends Application{
     private int portNum;    // stores port number
     private String IPAddr;  // stores IP address
     private int numPlayersOnline = 0;
-    private VBox playersList;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
@@ -34,12 +33,11 @@ public class FXNet extends Application{
 
     // variables to hold player and opponent game information
     private String usernameApproved = "";
-    private String username, oppUsername;
+    private String username;
 
     // declare and initialize needed GUI components
     private TextArea messages = new TextArea();
-    private Button showPlayers = new Button("Show Players Online");
-    private Button back = new Button("Back");
+
     private Button helperBtn = new Button();
 
 
