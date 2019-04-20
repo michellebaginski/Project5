@@ -192,20 +192,35 @@ public class FXNet extends Application {
                             conn.send("Username approved", conn.threadID);
                             conn.setSenderUsername(input);
 
-                            // send a message to the clients when to begin the game
-                            if (conn.numClients == 2 && !gameStarted) {
-                                for (int i=0; i<2; i++) {
-                                    conn.send("Start game", i);
+                            // send this player's username to other players
+                            for(int i = 0; i < conn.numClients; i++){
+                                if(i != conn.threadID){
+                                    conn.send("New player joined: " + conn.getSenderUsername(), i);
                                 }
-                                gameStarted = true;
+                                else{
+                                    // send other players' usernames to this player
+                                    for(int j = 0; j < conn.numClients; j++){
+                                        if(j != conn.threadID){
+                                            String playerName = conn.threads.get(j).getClientUsername();
+                                            conn.send("New player joined: " + playerName, conn.threadID);
+                                        }
+                                    }
+                                }
                             }
                         }
                         else{
                             // the name is taken
                             conn.send("Username not approved", conn.threadID);
                         }
+                        
+                        // send a message to the clients when to begin the game
+                        if (!gameStarted && conn.numClients == 2) {
+                            for (int i=0; i<2; i++) {
+                                conn.send("Start game", i);
+                            }
+                            gameStarted = true;
+                        }
                     }
-
                 });
             }
         });
