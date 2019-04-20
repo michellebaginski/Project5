@@ -17,6 +17,7 @@ import javafx.scene.image.ImageView;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+
 public class FXNet extends Application{
 
     private NetworkConnection conn;
@@ -28,6 +29,9 @@ public class FXNet extends Application{
     private Scene root;
     private TextField usernameField = new TextField();
 
+    HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
+
+
     // variables to hold player and opponent game information
     private String usernameApproved = "";
     private String username, oppUsername;
@@ -37,6 +41,7 @@ public class FXNet extends Application{
     private Button showPlayers = new Button("Show Players Online");
     private Button back = new Button("Back");
     private Button helperBtn = new Button();
+
 
 
     // creates a GUI scene
@@ -108,6 +113,25 @@ public class FXNet extends Application{
                 root.getChildren().addAll(usernameLbl,usernameField);
                 connect.setDisable(true);
 
+                //open the text file after connecting to server then extract data from the file, then close it.
+                ReadTxtFile extractFile = new ReadTxtFile();
+                extractFile.openFile();
+                extractFile.readFile();
+                extractFile.closeFile();
+                triviaQs = extractFile.getTriviaQnsHashMap();
+
+                //DOUBLE CHECKING IF HASH MAP WORKED. Take out later.
+                for (HashMap.Entry<String, ArrayList<String>> entry : triviaQs.entrySet()) {
+                    System.out.println("Key: "+entry.getKey());
+                    ArrayList<String> val = entry.getValue();
+                    System.out.println("3 values are: ");
+                    for (int i = 0; i < val.size(); i++){
+                        System.out.println(val.get(i));
+                    }
+
+                }
+
+
             }
             catch(Exception e){
                 portPromptLbl.setDisable(false);
@@ -160,14 +184,11 @@ public class FXNet extends Application{
         usernameField.setOnAction(usernameFieldEvent);
         // helper button used for username error checking
         helperBtn.setOnAction(usernameFieldEvent);
-
         return root;
     }
 
     // main method
-    public static void main(String[] args) {
-        launch(args);
-    }
+    public static void main(String[] args) { launch(args); }
 
     // opens the GUI window
     @Override
@@ -177,27 +198,6 @@ public class FXNet extends Application{
         sceneMap.put("root", root);
         primaryStage.setScene(sceneMap.get("root"));
         primaryStage.show();
-
-        HBox playersListScene = new HBox(20,back);
-        playersList = new VBox(20);
-        playersListScene.getChildren().add(playersList);
-        Scene players = new Scene(playersListScene);
-        playersList.setPrefSize(600, 600);
-        players.getStylesheets().add("Background2.css");
-
-        sceneMap.put("players", players);
-
-        // event handler for Show Players Online button
-        showPlayers.setOnAction(event -> {
-            primaryStage.setTitle("Player: " + conn.clientUsername);
-            primaryStage.setScene(sceneMap.get("players"));
-            primaryStage.show();
-
-        });
-        // event handler for back button
-        back.setOnAction(event -> {
-            primaryStage.setScene(sceneMap.get("root"));
-        });
 
     }
 
