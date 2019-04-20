@@ -11,6 +11,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import sun.nio.ch.Net;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -20,12 +22,15 @@ public class FXNet extends Application {
     private int portNum;
     private Label clientsConnected = new Label();
     private TextArea messages = new TextArea();
-
-    private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
-
+    private boolean gameStarted = false;
+    private int questionNum = 1;
 
     // create the contents of the server GUI
     private Parent createContent() {
+        messages.setEditable(false);
+        messages.setMaxHeight(40);
+        messages.setPadding(new Insets(5, 5, 5, 5));
+        clientsConnected.setPrefHeight(30);
 
         // contains introductory content
         VBox box = new VBox();
@@ -42,9 +47,9 @@ public class FXNet extends Application {
 
         Label greetLabel = new Label("Welcome to the Trivia Game!");
         Label instLabel = new Label("Here's how to play: ");
-        Label instLabel2 = new Label("A group of players will be asked a new question during each round with x choices. The players ");
+        Label instLabel2 = new Label("A group of players will be asked a new question during each round with 3 choices. The players ");
         Label instLabel3 = new Label("who get the question correct are rewarded 1 point. At the end of the game, a ranking of player");
-        Label instLabel4 = new Label("will be displayed.");
+        Label instLabel4 = new Label(" scores will be displayed.");
         instrBox.getChildren().addAll(instLabel, instLabel2, instLabel3, instLabel4);
 
         Label serverLabel = new Label("Begin by connecting to a server.");
@@ -102,17 +107,6 @@ public class FXNet extends Application {
                 root.getChildren().add(playBox);
                 clientsConnected.setText("Number of clients connected: " + conn.numClients + "\n");
                 clientsConnected.setPadding(new Insets(5, 5, 5, 5));
-
-                ReadTxtFile extractQs = new ReadTxtFile();
-                extractQs.openFile();
-                extractQs.readFile();
-                extractQs.closeFile();
-                randQtns = extractQs.getTriviaQnsHashMap();
-
-                //DOUBLE CHECKING HASHMAP TO CHECK IF IT WORKED, REMOVE LATER. FOR SAEMA'S REFERENCE
-                for (HashMap.Entry<Integer,String> entry : randQtns.entrySet()) {
-                    System.out.println("Key: " + entry.getKey() + " Question: " + entry.getValue());
-                }
             }
             catch (Exception e){
                 srvOn.setDisable(true);
@@ -173,6 +167,7 @@ public class FXNet extends Application {
 
                     // a new client connected to server
                     if (input.equals("I am connected")){
+                        clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
                     }
 
                     //Checking if the username is already in the list
@@ -180,16 +175,35 @@ public class FXNet extends Application {
                         input = input.substring(10,input.length());
                         // check if the user name is not already takem
                         if(!ClientInfo.containsKey(input)) {
-                            // add the name and id to hashmap
+                            // add the name and id to hash map
                             ClientInfo.put(input, conn.threadID);
                             conn.send("Username approved", conn.threadID);
                             conn.setSenderUsername(input);
+
+                            // send a message to the clients when to begin the game
+                            if (conn.numClients == 2 && !gameStarted) {
+                                for (int i=0; i<2; i++) {
+                                    conn.send("Start game", i);
+                                }
+                                gameStarted = true;
+                            }
                         }
                         else{
                             // the name is taken
                             conn.send("Username not approved", conn.threadID);
                         }
                     }
+
+                    //Unfinished: sending questions to all the clients
+                    if (gameStarted) {
+                        while (questionNum < 11) {
+                            for (int i=0; i<2; i++) {
+                                conn.send("Question " + questionNum, i);
+                            }
+                            questionNum++;
+                        }
+                    }
+
                 });
             }
         });
