@@ -17,9 +17,6 @@ import javafx.scene.image.ImageView;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import java.util.Scanner;
-import java.io.*;
-
 public class FXNet extends Application{
 
     private NetworkConnection conn;
