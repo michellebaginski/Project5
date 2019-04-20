@@ -20,16 +20,9 @@ public class FXNet extends Application {
     private int portNum;
     private Label clientsConnected = new Label();
     private TextArea messages = new TextArea();
-    private ArrayList<Player> players = new ArrayList<>();
-    private ArrayList<String> gameChoices = new ArrayList<>();  // list of choices the players can choose
-    private ArrayList<ArrayList<Integer>> gameScoreTable = new ArrayList<>();   // 2d table of scores
 
     // create the contents of the server GUI
     private Parent createContent() {
-        messages.setEditable(false);
-        messages.setMaxHeight(40);
-        messages.setPadding(new Insets(5, 5, 5, 5));
-        clientsConnected.setPrefHeight(30);
 
         // contains introductory content
         VBox box = new VBox();
@@ -98,7 +91,7 @@ public class FXNet extends Application {
                 init();
                 messages.clear();
                 messages.appendText("A server with port number " + portNum + " is ON and is listening for client connections.\n");
-                messages.appendText("A game will be initiated once there are at least 4 players online.\n");
+                messages.appendText("A game will be initiated once there are 4 players online.\n");
                 srvOn.setDisable(true);
                 srvOff.setDisable(false);
                 root.getChildren().add(playBox);
@@ -164,8 +157,6 @@ public class FXNet extends Application {
 
                     // a new client connected to server
                     if (input.equals("I am connected")){
-                        players.add(conn.numClients-1, new Player());
-                        clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
                     }
 
                     //Checking if the username is already in the list
