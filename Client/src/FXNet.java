@@ -50,7 +50,7 @@ public class FXNet extends Application{
         Button connect = new Button("Connect");
         connect.setTranslateX(245);
         messages.setPrefHeight(90);
-
+        messages.setEditable(false);
 
         TextField portField = new TextField();
         TextField IPField = new TextField();
@@ -167,6 +167,8 @@ public class FXNet extends Application{
                     root.getChildren().add(messages);
                     messages.setText("Connected to server with port number " +
                             portNum + " and IP address " + IPAddr + "\n");
+                    messages.appendText("Current Players: "+"\n");
+
                 }
                 else if (usernameApproved.equals("no")) {
                     usernameLbl.setText("Username is taken. Try a different name. it's not working");
@@ -245,9 +247,16 @@ public class FXNet extends Application{
                 // server is notifying the player of other players online
                 else if( input.length() >= 19 && input.substring(0, 19).equals("New player joined: ")){
                     input = input.substring(19, input.length());
+                    messages.appendText(input +" has joined the game.\n");
                     numPlayersOnline++;
                 }
-
+                
+                //Not needed since when the username is approved, the current scene gets modified for the gameplay scene.
+                //It had issues when the last client would type in a taken username, the scene would change before the client is 
+                //prompted to choose another username.
+                //Maybe we can use this if statement to tell the client that 4 players joined the game and the game just started 
+                //by appending a message to the messages TextArea ???
+                /*
                 // begin the game once there are enough connections
                 if(input.equals("Start game")) {
                     messages.setVisible(false);
@@ -257,8 +266,8 @@ public class FXNet extends Application{
                     f.getStylesheets().add("Background.css");
                     f.getChildren().addAll(l);
                     stage.setScene(new Scene(f));
-                    stage.show();
-                }
+                    stage.show(); 
+                } */
 
                 // receive a new question from the server
                 if (input.length()== 10 && input.contains("Question")) {
