@@ -19,25 +19,27 @@ import java.util.HashMap;
 
 
 public class FXNet extends Application{
-
     private NetworkConnection conn;
     private int portNum;    // stores port number
     private String IPAddr;  // stores IP address
     private int numPlayersOnline = 0;
+    private VBox playersList;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
+    private Stage stage;
 
     HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
 
 
     // variables to hold player and opponent game information
     private String usernameApproved = "";
-    private String username;
+    private String username, oppUsername;
 
     // declare and initialize needed GUI components
     private TextArea messages = new TextArea();
-
+    private Button showPlayers = new Button("Show Players Online");
+    private Button back = new Button("Back");
     private Button helperBtn = new Button();
 
 
@@ -61,7 +63,6 @@ public class FXNet extends Application{
         // declare and initialize a root
         VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
         root.setPrefSize(600, 600);
-        root.getStylesheets().add("Background.css");
 
         // event handler for port number textField
         portField.setOnAction(event -> {
@@ -185,6 +186,10 @@ public class FXNet extends Application{
         return root;
     }
 
+    public void setStage(Stage stage) {
+        this.stage = stage;
+    }
+
     // main method
     public static void main(String[] args) { launch(args); }
 
@@ -192,6 +197,7 @@ public class FXNet extends Application{
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Welcome to Triva Game!");
+        setStage(primaryStage);
         root = new Scene(createContent());
         sceneMap.put("root", root);
         primaryStage.setScene(sceneMap.get("root"));
@@ -239,6 +245,22 @@ public class FXNet extends Application{
                 else if( input.length() >= 19 && input.substring(0, 19).equals("New player joined: ")){
                     input = input.substring(19, input.length());
                     numPlayersOnline++;
+                }
+
+                // begin the game once there are enough connections
+                if(input.equals("Start game")) {
+                    messages.setVisible(false);
+                    HBox f = new HBox();
+                    f.setPrefSize(600, 600);
+                    Label l = new Label("GAME SCREEN");
+                    f.getChildren().addAll(l);
+                    stage.setScene(new Scene(f));
+                    stage.show();
+                }
+
+                // receive a new question from the server
+                if (input.length()== 10 && input.contains("Question")) {
+                    System.out.println("QUESTION RECEIVED");
                 }
 
             });
