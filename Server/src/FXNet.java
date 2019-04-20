@@ -20,6 +20,9 @@ public class FXNet extends Application {
     private int portNum;
     private Label clientsConnected = new Label();
     private TextArea messages = new TextArea();
+    
+    private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
+
 
     // create the contents of the server GUI
     private Parent createContent() {
@@ -99,6 +102,17 @@ public class FXNet extends Application {
                 root.getChildren().add(playBox);
                 clientsConnected.setText("Number of clients connected: " + conn.numClients + "\n");
                 clientsConnected.setPadding(new Insets(5, 5, 5, 5));
+                
+                ReadTxtFile extractQs = new ReadTxtFile();
+                extractQs.openFile();
+                extractQs.readFile();
+                extractQs.closeFile();
+                randQtns = extractQs.getTriviaQnsHashMap();
+
+                //DOUBLE CHECKING HASHMAP TO CHECK IF IT WORKED, REMOVE LATER. FOR SAEMA'S REFERENCE
+                for (HashMap.Entry<Integer,String> entry : randQtns.entrySet()) {
+                    System.out.println("Key: " + entry.getKey() + " Question: " + entry.getValue());
+                }
             }
             catch (Exception e){
                 srvOn.setDisable(true);
