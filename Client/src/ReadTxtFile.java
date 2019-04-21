@@ -1,3 +1,4 @@
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
@@ -5,18 +6,24 @@ import java.io.*;
 
 public class ReadTxtFile{
 
+    // key: question | value: array index of 0, 1, 2
     private HashMap<String, ArrayList<String>> triviaQns = new HashMap<String, ArrayList<String>>();
-    private ArrayList<String> answersArray = new ArrayList<String>();
+    private HashMap<String, Integer> questionNum = new HashMap<String, Integer>();
     private Scanner x;
     private String filename = "src/questions.txt";
+    private ArrayList<String> answersArray = new ArrayList<String>();
     private String answersFilename ="src/answers.txt";
+
+    //return the private ArrayList answers
+    public ArrayList<String> getAnswersArray(){
+        return this.answersArray;
+    }
 
     //return the private hashmap
     public HashMap<String,ArrayList<String>> getTriviaQnsHashMap(){
         return this.triviaQns;
     }
-    //return the private ArrayList answers
-    public ArrayList<String> getAnswersArray(){return this.answersArray; }
+
     public void openFile(){
         try{
             x = new Scanner(new File(filename));
@@ -40,11 +47,29 @@ public class ReadTxtFile{
 
     //Create a function to traverse the text file and extract the questions and answers and insert into a hashmap
     public void readFile(){
+        int picNum = 1;
         while( x.hasNext()){
             String key = x.nextLine();
             ArrayList<String> multiAnswers = getMCAnswers();
             triviaQns.put(key,multiAnswers);
+            questionNum.put(key, picNum);
+            picNum++;
         }
+
+        for (HashMap.Entry<String, Integer> entry : questionNum.entrySet()) {
+            System.out.println("Key: "+entry.getKey());
+            int val = entry.getValue();
+            System.out.println("Value: " + entry.getValue());
+        }
+    }
+
+    // create a function to close the file after opening and extracting the text from the file
+    public void closeFile(){
+        x.close();
+    }
+
+    public HashMap<String, Integer> getQuestionNum() {
+        return this.questionNum;
     }
 
     public void getAnswersTxt(){
@@ -66,8 +91,4 @@ public class ReadTxtFile{
         }
     }
 
-    // create a function to close the file after opening and extracting the text from the file
-    public void closeFile(){
-        x.close();
-    }
 }
