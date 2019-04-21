@@ -20,18 +20,24 @@ import java.util.Collections;
 
 public class FXNet extends Application{
     private NetworkConnection conn;
-    private int portNum, numQuestions;    // stores port number
+    private int portNum, numQuestions, questionNum;    // stores port number
     private String IPAddr;  // stores IP address
     private int numPlayersOnline = 0;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
     private Stage stage;
+
     private HashMap<String, Integer> picMap = new HashMap<String, Integer>();
     private ArrayList<Label> pictures = new ArrayList<Label>();
-    private Label answerPic;
-    private String answerText;
+    ArrayList<String> answerListArr;
+    private Label answerPic = new Label();
+    private Label answerText = new Label();
     private Label questionLbl = new Label();
+    int score;
+    private Label myScore = new Label("My score: "+ score);
+
+
     HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
     private String correctAnswer; //store the correct answer to the current trivia question
 
@@ -125,21 +131,13 @@ public class FXNet extends Application{
                 picMap = extractFile.getQuestionNum();
                 triviaQs = extractFile.getTriviaQnsHashMap();
                 numQuestions = triviaQs.size();
+                extractFile.getAnswersTxt();
+                answerListArr =extractFile.getAnswersArray();
 
                 for(int i = 0; i<3; i++){
                     indices.add(i);
                 }
 
-                //DOUBLE CHECKING IF HASH MAP WORKED. Take out later.
-                for (HashMap.Entry<String, ArrayList<String>> entry : triviaQs.entrySet()) {
-                    System.out.println("Key: "+entry.getKey());
-                    ArrayList<String> val = entry.getValue();
-                    System.out.println("3 values are: ");
-                    for (int i = 0; i < val.size(); i++){
-                        System.out.println(val.get(i));
-                    }
-
-                }
             }
             catch(Exception e){
                 portPromptLbl.setDisable(false);
@@ -152,13 +150,25 @@ public class FXNet extends Application{
 
         // generic event handler to know which button the client pressed
         EventHandler<ActionEvent> triviaBtn = event ->{
+            disableBtns();
             Button b = (Button) event.getSource();
             String playerAnswer = b.getText();
             System.out.println(playerAnswer + " Button was pressed");
             try{
+                String check = "";
                 if(playerAnswer.equals(correctAnswer)){
-                    conn.send("Score: 1" );
+                    check = "Correct! ";
+                    conn.send("Score: 1");
+                    score++;
+                    myScore.setText("My score:"+ score);
                 }
+                else {
+                    check = "Wrong! ";
+                }
+                answerPic.setGraphic(pictures.get(questionNum-1).getGraphic());
+                answerText.setText(check + answerListArr.get(questionNum-1));
+                answerPic.setVisible(true);
+                answerText.setVisible(true);
             }
             catch (Exception e){
                 System.out.println("Some shit went wrong");
@@ -201,10 +211,15 @@ public class FXNet extends Application{
                     messages.setText("Connected to server with port number " +
                             portNum + " and IP address " + IPAddr + "\n");
                     messages.appendText("Current Players: "+"\n");
+                    root.getChildren().addAll(myScore);
                     root.getChildren().addAll(questionLbl);
+                    root.getChildren().addAll(answerPic);
+                    root.getChildren().addAll(answerText);
                     root.getChildren().addAll(triviaBox);
+                    myScore.setVisible(false);
                     triviaBox.setVisible(false);
-
+                    answerPic.setVisible(false);
+                    answerText.setVisible(false);
                 }
                 else if (usernameApproved.equals("no")) {
                     usernameLbl.setText("Username is taken. Try a different name. it's not working");
@@ -288,6 +303,17 @@ public class FXNet extends Application{
         Platform.exit();
     }
 
+    public void enableBtns(){
+        for(int i = 0; i < 3; i++){
+            triviaBox.getChildren().get(i).setDisable(false);
+        }
+    }
+    public void disableBtns(){
+        for(int i = 0; i < 3; i++){
+            triviaBox.getChildren().get(i).setDisable(true);
+        }
+    }
+
     // creates and returns a client socket connection
     private Client createClient() {
         return new Client(IPAddr, portNum, data -> {
@@ -318,24 +344,25 @@ public class FXNet extends Application{
                 // begin the game
                 if (input.equals("Start game")) {
                     assignPictures();   // create an array of pictures for each answer
+                    messages.appendText("Enough players have joined,begin game!\n");
+                    myScore.setVisible(true);
                 }
 
                 // receive a new question from the server
-                else if (input.length() >= 12 && input.contains("Question")) {
-                    // parse the question from the string
-                    if (input.indexOf(':') == 10) input = input.substring(12);          // current question # is 1 digit
-                    else if (input.indexOf(':') == 11) input = input.substring(13);     // current question # is 2 digits
+                else if (input.length() >= 10 && input.contains("Question: ")) {
+                    enableBtns();
+                    answerPic.setVisible(false);
+                    answerText.setVisible(false);
+                    input=input.substring(10);
 
                     System.out.println("QUESTION RECEIVED: " + input);
                     correctAnswer = triviaQs.get(input).get(0);  //record the correct answer to check if the client answered correctly later
-                    setButtonTxt(triviaQs.get(input));
+                    setButtonTxt(triviaQs.get(input));       //gets array from hashamp
                     questionLbl.setText(input);
                     triviaBox.setVisible(true);                 //set the box question buttons visible once receiving a question for the first time
                     System.out.println("CORRECT ANSWER: " + correctAnswer);
-
-                    int questionNum = picMap.get(input);        // use the string to return the question number
+                    questionNum = picMap.get(input);        // use the string to return the question number
                     System.out.println("Question Number=" + questionNum);
-                    answerPic = pictures.get(questionNum-1);    // retrieve the corresponding picture label for the question
                 }
 
             });
