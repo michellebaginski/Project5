@@ -22,7 +22,7 @@ public class FXNet extends Application {
     private Label clientsConnected = new Label();
     private TextArea messages = new TextArea();
     private boolean gameStarted = false;
-    private int questionNum = 1;
+    private int questionNum = 0;
 
     private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
 
@@ -173,6 +173,8 @@ public class FXNet extends Application {
             conn.closeConn();
     }
 
+    int numAnswered;//check how many people answered the question
+    boolean check = false;
     // creates and returns a server
     private synchronized Server createServer() {
         return new Server(portNum, data-> {
@@ -187,7 +189,6 @@ public class FXNet extends Application {
                     if (input.equals("I am connected")){
                         clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
                     }
-
                     //Checking if the username is already in the list
                     else if(input.length() >= 10 && input.substring(0,10).equals("Username: ")){
                         input = input.substring(10,input.length());
@@ -213,31 +214,52 @@ public class FXNet extends Application {
                                     }
                                 }
                             }
+                            // send a message to the clients when to begin the game
+                            if (!gameStarted && conn.numClients == 2) {
+
+                                for (int i=0; i<2; i++) {
+                                    conn.send("Start game", i);
+                                }
+                                gameStarted = true;
+                            }
+
                         }
                         else{
                             // the name is taken
                             conn.send("Username not approved", conn.threadID);
                         }
+                    }
 
-                        // send a message to the clients when to begin the game
-                        if (!gameStarted && conn.numClients == 2) {
-                            for (int i=0; i<2; i++) {
-                                conn.send("Start game", i);
-                            }
-                            gameStarted = true;
+
+                    else if(input.length() >= 7 && input.equals("Score: ")) {
+                        if (input.substring(7).equals("1")) {
+                            conn.threads.get(conn.threadID).score++; //increment the user's score
                         }
-                        // game play code goes here?
-                        if (gameStarted) {
-                            // this is just a test
-                            for (int i=0; i<2; i++) {
-                                // ******* QUESTIONS MUST BE SENT IN THIS FORMAT PLEASE! *******
-                                conn.send("Question: " + randQtns.get(14), i);
+                    }
+
+                    //Send another question
+                    else if(input.contains("Send next question") && !check) {
+                        numAnswered++;
+                        if(numAnswered == 2){
+                            for(int i = 0; i< 2; i++){
+                                conn.send("Question: " + randQtns.get(8), i);
                             }
+                            numAnswered = 0;
+                            check = true;
                         }
-                        else if(input.length() >= 7 && input.equals("Score: ")){
-                            if(input.substring(7).equals("1")){
-                                conn.threads.get(conn.threadID).score++; //increment the user's score
-                            }
+                        conn.send("sending message",0);
+                        conn.send("sending message",1);
+                        System.out.println("I JSGFST THAT MESSAGE");
+                    }
+
+
+                    // game play code goes here?
+                    if (gameStarted && questionNum == 0) {
+                        // this is just a test
+                        for (int i=0; i<2; i++) {
+                            // ******* QUESTIONS MUST BE SENT IN THIS FORMAT PLEASE! *******
+                            conn.send("Question: " + randQtns.get(2), i);
+                            questionNum++;
                         }
                     }
                 });
@@ -247,3 +269,4 @@ public class FXNet extends Application {
     }
 
 }
+
