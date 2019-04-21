@@ -359,9 +359,7 @@ public class FXNet extends Application{
                     assignPictures();   // create an array of pictures for each answer
                     messages.appendText("Enough players have joined,begin game!\n");
                     myScore.setVisible(true);
-                }
-                else if (input.equals("sending message")) {
-                    System.out.println("RECEIVEEEEEED");
+                    conn.send("Send next question");
                 }
 
                 // receive a new question from the server
