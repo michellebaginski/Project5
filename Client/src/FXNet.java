@@ -1,6 +1,7 @@
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -34,6 +35,7 @@ public class FXNet extends Application{
     private Label answerPic = new Label();
     private Label answerText = new Label();
     private Label questionLbl = new Label();
+    private Button next = new Button("Next");
     int score;
     private Label myScore = new Label("My score: "+ score);
 
@@ -148,23 +150,31 @@ public class FXNet extends Application{
             }
         });
 
+        next.setOnAction(e->{
+            conn.send("Send next question");
+            next.setDisable(true);
+        });
+
         // generic event handler to know which button the client pressed
         EventHandler<ActionEvent> triviaBtn = event ->{
             disableBtns();
             Button b = (Button) event.getSource();
             String playerAnswer = b.getText();
-            System.out.println(playerAnswer + " Button was pressed");
+            System.out.println("I pressed "+playerAnswer);
             try{
+
                 String check = "";
                 if(playerAnswer.equals(correctAnswer)){
                     check = "Correct! ";
                     conn.send("Score: 1");
                     score++;
                     myScore.setText("My score:"+ score);
+
                 }
                 else {
                     check = "Wrong! ";
                 }
+                next.setVisible(true);
                 answerPic.setGraphic(pictures.get(questionNum-1).getGraphic());
                 answerText.setText(check + answerListArr.get(questionNum-1));
                 answerPic.setVisible(true);
@@ -216,10 +226,13 @@ public class FXNet extends Application{
                     root.getChildren().addAll(answerPic);
                     root.getChildren().addAll(answerText);
                     root.getChildren().addAll(triviaBox);
+                    root.getChildren().addAll(next);
+
                     myScore.setVisible(false);
                     triviaBox.setVisible(false);
                     answerPic.setVisible(false);
                     answerText.setVisible(false);
+                    next.setVisible(false);
                 }
                 else if (usernameApproved.equals("no")) {
                     usernameLbl.setText("Username is taken. Try a different name. it's not working");
@@ -342,10 +355,13 @@ public class FXNet extends Application{
                 }
 
                 // begin the game
-                if (input.equals("Start game")) {
+                else if (input.equals("Start game")) {
                     assignPictures();   // create an array of pictures for each answer
                     messages.appendText("Enough players have joined,begin game!\n");
                     myScore.setVisible(true);
+                }
+                else if (input.equals("sending message")) {
+                    System.out.println("RECEIVEEEEEED");
                 }
 
                 // receive a new question from the server
@@ -353,6 +369,8 @@ public class FXNet extends Application{
                     enableBtns();
                     answerPic.setVisible(false);
                     answerText.setVisible(false);
+                    next.setVisible(false);
+                    next.setDisable(false);
                     input=input.substring(10);
 
                     System.out.println("QUESTION RECEIVED: " + input);
