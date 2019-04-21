@@ -20,22 +20,23 @@ import java.util.Collections;
 
 public class FXNet extends Application{
     private NetworkConnection conn;
-    private int portNum;    // stores port number
+    private int portNum, numQuestions;    // stores port number
     private String IPAddr;  // stores IP address
     private int numPlayersOnline = 0;
-    private VBox playersList;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
     private Stage stage;
-
+    private HashMap<String, Integer> picMap = new HashMap<String, Integer>();
+    private ArrayList<Label> pictures = new ArrayList<Label>();
+    private Label answerPic;
+    private String answerText;
     private Label questionLbl = new Label();
     HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
     private String correctAnswer; //store the correct answer to the current trivia question
 
     ArrayList<Button> answerBtns = new ArrayList<Button>();
     ArrayList<Integer> indices = new ArrayList<Integer>(3); // Initialize
-
 
     // variables to hold player and opponent game information
     private String usernameApproved = "";
@@ -121,7 +122,9 @@ public class FXNet extends Application{
                 extractFile.openFile();
                 extractFile.readFile();
                 extractFile.closeFile();
+                picMap = extractFile.getQuestionNum();
                 triviaQs = extractFile.getTriviaQnsHashMap();
+                numQuestions = triviaQs.size();
 
                 for(int i = 0; i<3; i++){
                     indices.add(i);
@@ -231,6 +234,25 @@ public class FXNet extends Application{
         }
     }
 
+    // populates an array with label pictures that will be displayed along with the correct answer for each question
+    public void assignPictures() {
+        String jpg = "qn.jpg";
+        for (int i=1; i<=numQuestions; i++) {
+            String imgNum = Integer.toString(i);
+            jpg = jpg.replace("n", imgNum);
+            Image pic = new Image(jpg);
+            ImageView v = new ImageView(pic);
+            v.setFitHeight(300);
+            v.setFitWidth(300);
+            v.setPreserveRatio(true);
+            Label picture = new Label();
+            picture.setGraphic(v);
+            System.out.println("JPG: " + jpg);
+            jpg = jpg.replace(imgNum, "n");
+            pictures.add(picture);
+        }
+    }
+
     public void setStage(Stage stage) {
         this.stage = stage;
     }
@@ -293,34 +315,28 @@ public class FXNet extends Application{
                     numPlayersOnline++;
                 }
 
-                // receive a new question from the server
-                else if (input.length() >= 10 && input.substring(0,10).equals("Question: ")) {
-                    input = input.substring(10,input.length());
-                    correctAnswer = triviaQs.get(input).get(0);    //record the correct answer to check if the client answered correctly later
-                    setButtonTxt(triviaQs.get(input));
-                    questionLbl.setText(input);
-                    triviaBox.setVisible(true);                     //set the box question buttons visible once receiving a question for the first time
-                    System.out.println("QUESTION RECEIVED: " + input);
-                    System.out.println("CORRECT ANSWER: " + correctAnswer);
+                // begin the game
+                if (input.equals("Start game")) {
+                    assignPictures();   // create an array of pictures for each answer
                 }
 
-                //Not needed since when the username is approved, the current scene gets modified for the gameplay scene.
-                //It had issues when the last client would type in a taken username, the scene would change before the client is
-                //prompted to choose another username.
-                //Maybe we can use this if statement to tell the client that 4 players joined the game and the game just started
-                //by appending a message to the messages TextArea ???
-                /*
-                // begin the game once there are enough connections
-                if(input.equals("Start game")) {
-                    messages.setVisible(false);
-                    HBox f = new HBox();
-                    f.setPrefSize(600, 600);
-                    Label l = new Label("GAME SCREEN");
-                    f.getStylesheets().add("Background.css");
-                    f.getChildren().addAll(l);
-                    stage.setScene(new Scene(f));
-                    stage.show();
-                } */
+                // receive a new question from the server
+                else if (input.length() >= 12 && input.contains("Question")) {
+                    // parse the question from the string
+                    if (input.indexOf(':') == 10) input = input.substring(12);          // current question # is 1 digit
+                    else if (input.indexOf(':') == 11) input = input.substring(13);     // current question # is 2 digits
+
+                    System.out.println("QUESTION RECEIVED: " + input);
+                    correctAnswer = triviaQs.get(input).get(0);  //record the correct answer to check if the client answered correctly later
+                    setButtonTxt(triviaQs.get(input));
+                    questionLbl.setText(input);
+                    triviaBox.setVisible(true);                 //set the box question buttons visible once receiving a question for the first time
+                    System.out.println("CORRECT ANSWER: " + correctAnswer);
+
+                    int questionNum = picMap.get(input);        // use the string to return the question number
+                    System.out.println("Question Number=" + questionNum);
+                    answerPic = pictures.get(questionNum-1);    // retrieve the corresponding picture label for the question
+                }
 
             });
         });
