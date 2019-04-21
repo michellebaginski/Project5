@@ -16,7 +16,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import java.util.ArrayList;
 import java.util.HashMap;
-
+import java.util.Collections;
 
 public class FXNet extends Application{
     private NetworkConnection conn;
@@ -29,8 +29,12 @@ public class FXNet extends Application{
     private TextField usernameField = new TextField();
     private Stage stage;
 
+    private Label questionLbl = new Label();
     HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
     private String correctAnswer; //store the correct answer to the current trivia question
+
+    ArrayList<Button> answerBtns = new ArrayList<Button>();
+    ArrayList<Integer> indices = new ArrayList<Integer>(3); // Initialize
 
 
     // variables to hold player and opponent game information
@@ -40,9 +44,7 @@ public class FXNet extends Application{
     // declare and initialize needed GUI components
     private TextArea messages = new TextArea();
     private Button helperBtn = new Button();
-    
-   
-
+    HBox triviaBox = new HBox(20);
 
 
     // creates a GUI scene
@@ -121,6 +123,10 @@ public class FXNet extends Application{
                 extractFile.closeFile();
                 triviaQs = extractFile.getTriviaQnsHashMap();
 
+                for(int i = 0; i<3; i++){
+                    indices.add(i);
+                }
+
                 //DOUBLE CHECKING IF HASH MAP WORKED. Take out later.
                 for (HashMap.Entry<String, ArrayList<String>> entry : triviaQs.entrySet()) {
                     System.out.println("Key: "+entry.getKey());
@@ -131,8 +137,6 @@ public class FXNet extends Application{
                     }
 
                 }
-
-
             }
             catch(Exception e){
                 portPromptLbl.setDisable(false);
@@ -142,6 +146,22 @@ public class FXNet extends Application{
 
             }
         });
+
+        // generic event handler to know which button the client pressed
+        EventHandler<ActionEvent> triviaBtn = event ->{
+            Button b = (Button) event.getSource();
+            String playerAnswer = b.getText();
+            System.out.println(playerAnswer + " Button was pressed");
+            try{
+                if(playerAnswer.equals(correctAnswer)){
+                    conn.send("Score: 1" );
+                }
+            }
+            catch (Exception e){
+                System.out.println("Some shit went wrong");
+                e.printStackTrace();
+            }
+        };
 
         // event handler for usernameField
         EventHandler<ActionEvent> usernameFieldEvent = e -> {
@@ -155,7 +175,16 @@ public class FXNet extends Application{
                     messages.setText("Press the Connect button below to connect to the server.");
 
                     conn.setClientUsername(username); //store client's username in NetworkConnection
-
+                    //initialize the buttons for the answers for the first time
+                    for(int i = 0; i < 3; i++){
+                        Button b = new Button();
+                        answerBtns.add(b);
+                    }
+                    // add game btns in a HBox and set on action with the generic button event handler
+                    for(int i = 0; i < 3; i++){
+                        answerBtns.get(i).setOnAction(triviaBtn);
+                        triviaBox.getChildren().add(answerBtns.get(i));
+                    }
                     // remove GUI contents that are not required anymore and add required ones
                     root.getChildren().remove(portPromptLbl);
                     root.getChildren().remove(portField);
@@ -169,6 +198,9 @@ public class FXNet extends Application{
                     messages.setText("Connected to server with port number " +
                             portNum + " and IP address " + IPAddr + "\n");
                     messages.appendText("Current Players: "+"\n");
+                    root.getChildren().addAll(questionLbl);
+                    root.getChildren().addAll(triviaBox);
+                    triviaBox.setVisible(false);
 
                 }
                 else if (usernameApproved.equals("no")) {
@@ -187,23 +219,16 @@ public class FXNet extends Application{
         usernameField.setOnAction(usernameFieldEvent);
         // helper button used for username error checking
         helperBtn.setOnAction(usernameFieldEvent);
-        
-        // generic event handler to know which button the client pressed
-        EventHandler<ActionEvent> triviaBtn = event ->{
-           Button b = (Button) event.getSource();
-            String playerAnswer = b.getText();
-            try{
-                if(playerAnswer.equals(correctAnswer)){
-                    conn.send("Score: 1" );
-                }
-            }
-            catch (Exception e){
-                System.out.println("Some shit went wrong");
-                e.printStackTrace();
-            }
-        };
-        
+
         return root;
+    }
+
+    //This function will set the answer buttons to the correct multiple choice answers
+    public void setButtonTxt(ArrayList<String> answers){
+        Collections.shuffle(indices);  //shuffle the indices so the answers are in a different order for every question
+        for(int i = 0; i <3; i++ ){
+            answerBtns.get(i).setText(answers.get(indices.get(i)));  //set the text for each button
+        }
     }
 
     public void setStage(Stage stage) {
@@ -267,18 +292,22 @@ public class FXNet extends Application{
                     messages.appendText(input +" has joined the game.\n");
                     numPlayersOnline++;
                 }
+
                 // receive a new question from the server
                 else if (input.length() >= 10 && input.substring(0,10).equals("Question: ")) {
                     input = input.substring(10,input.length());
-                    correctAnswer = triviaQs.get(input).get(0);
+                    correctAnswer = triviaQs.get(input).get(0);    //record the correct answer to check if the client answered correctly later
+                    setButtonTxt(triviaQs.get(input));
+                    questionLbl.setText(input);
+                    triviaBox.setVisible(true);                     //set the box question buttons visible once receiving a question for the first time
                     System.out.println("QUESTION RECEIVED: " + input);
                     System.out.println("CORRECT ANSWER: " + correctAnswer);
                 }
-                
+
                 //Not needed since when the username is approved, the current scene gets modified for the gameplay scene.
-                //It had issues when the last client would type in a taken username, the scene would change before the client is 
+                //It had issues when the last client would type in a taken username, the scene would change before the client is
                 //prompted to choose another username.
-                //Maybe we can use this if statement to tell the client that 4 players joined the game and the game just started 
+                //Maybe we can use this if statement to tell the client that 4 players joined the game and the game just started
                 //by appending a message to the messages TextArea ???
                 /*
                 // begin the game once there are enough connections
@@ -290,7 +319,7 @@ public class FXNet extends Application{
                     f.getStylesheets().add("Background.css");
                     f.getChildren().addAll(l);
                     stage.setScene(new Scene(f));
-                    stage.show(); 
+                    stage.show();
                 } */
 
             });
