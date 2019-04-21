@@ -1,3 +1,4 @@
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -22,7 +23,7 @@ public class FXNet extends Application {
     private Label clientsConnected = new Label();
     private TextArea messages = new TextArea();
     private boolean gameStarted = false;
-    private int questionNum = 0;
+    private int questionNum = 1;
 
     private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
 
@@ -174,7 +175,7 @@ public class FXNet extends Application {
     }
 
     int numAnswered;//check how many people answered the question
-    boolean check = false;
+
     // creates and returns a server
     private synchronized Server createServer() {
         return new Server(portNum, data-> {
@@ -238,28 +239,19 @@ public class FXNet extends Application {
                     }
 
                     //Send another question
-                    else if(input.contains("Send next question") && !check) {
+                    else if(gameStarted && input.contains("Send next question")) {
                         numAnswered++;
-                        if(numAnswered == 2){
-                            for(int i = 0; i< 2; i++){
-                                conn.send("Question: " + randQtns.get(8), i);
+                        System.out.println("Question num :" + questionNum);
+                        if(numAnswered == 2 && questionNum != 11){
+
+                            for(int i = 0; i< 2; i++){ //testing with the first 10 questions with 2 players
+                                conn.send("Question: " + randQtns.get(questionNum), i);
                             }
-                            numAnswered = 0;
-                            check = true;
-                        }
-                        conn.send("sending message",0);
-                        conn.send("sending message",1);
-                        System.out.println("I JSGFST THAT MESSAGE");
-                    }
-
-
-                    // game play code goes here?
-                    if (gameStarted && questionNum == 0) {
-                        // this is just a test
-                        for (int i=0; i<2; i++) {
-                            // ******* QUESTIONS MUST BE SENT IN THIS FORMAT PLEASE! *******
-                            conn.send("Question: " + randQtns.get(2), i);
                             questionNum++;
+                            numAnswered = 0;
+                        }
+                        if(questionNum == 11){
+                            //do some shit with rankings
                         }
                     }
                 });
@@ -269,4 +261,3 @@ public class FXNet extends Application {
     }
 
 }
-
