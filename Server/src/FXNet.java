@@ -23,7 +23,7 @@ public class FXNet extends Application {
     private TextArea messages = new TextArea();
     private boolean gameStarted = false;
     private int questionNum = 1;
-    
+
     private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
 
     // create the contents of the server GUI
@@ -40,7 +40,7 @@ public class FXNet extends Application {
         // lists the instructions
         VBox instrBox = new VBox();
         box.setAlignment(Pos.CENTER);
-        // Hbox for clients connected and PLAY
+        // HBox for clients connected
         HBox playBox = new HBox();
         playBox.setSpacing(65);
         messages.setPrefHeight(60);
@@ -50,7 +50,7 @@ public class FXNet extends Application {
         Label instLabel = new Label("Here's how to play: ");
         Label instLabel2 = new Label("A group of players will be asked a new question during each round with 3 choices. The players ");
         Label instLabel3 = new Label("who get the question correct are rewarded 1 point. At the end of the game, a ranking of player");
-        Label instLabel4 = new Label(" scores will be displayed.");
+        Label instLabel4 = new Label("scores will be displayed.");
         instrBox.getChildren().addAll(instLabel, instLabel2, instLabel3, instLabel4);
 
         Label serverLabel = new Label("Begin by connecting to a server.");
@@ -108,7 +108,7 @@ public class FXNet extends Application {
                 root.getChildren().add(playBox);
                 clientsConnected.setText("Number of clients connected: " + conn.numClients + "\n");
                 clientsConnected.setPadding(new Insets(5, 5, 5, 5));
-                
+
                 ReadTxtFile extractQs = new ReadTxtFile();
                 extractQs.openFile();
                 extractQs.readFile();
@@ -117,7 +117,13 @@ public class FXNet extends Application {
 
                 //DOUBLE CHECKING HASHMAP TO CHECK IF IT WORKED, REMOVE LATER. FOR SAEMA'S REFERENCE
                 for (HashMap.Entry<Integer,String> entry : randQtns.entrySet()) {
+                    // the key is the question number
                     System.out.println("Key: " + entry.getKey() + " Question: " + entry.getValue());
+                }
+
+                // display the questions with their corresponding numbers
+                for (int i=1; i<=randQtns.size(); i++) {
+                    System.out.println("Q" + i + ": " + randQtns.get(i));
                 }
             }
             catch (Exception e){
@@ -212,13 +218,21 @@ public class FXNet extends Application {
                             // the name is taken
                             conn.send("Username not approved", conn.threadID);
                         }
-                        
+
                         // send a message to the clients when to begin the game
                         if (!gameStarted && conn.numClients == 2) {
                             for (int i=0; i<2; i++) {
                                 conn.send("Start game", i);
                             }
                             gameStarted = true;
+                        }
+                        // game play code goes here?
+                        if (gameStarted) {
+                            // this is just a test
+                            for (int i=0; i<2; i++) {
+                                // ******* QUESTIONS MUST BE SENT IN THIS FORMAT PLEASE! *******
+                                conn.send("Question 4: " + randQtns.get(14), i);
+                            }
                         }
                         else if(input.length() >= 7 && input.equals("Score: ")){
                             if(input.substring(7).equals("1")){
