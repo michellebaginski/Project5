@@ -231,7 +231,7 @@ public class FXNet extends Application {
                             // this is just a test
                             for (int i=0; i<2; i++) {
                                 // ******* QUESTIONS MUST BE SENT IN THIS FORMAT PLEASE! *******
-                                conn.send("Question 4: " + randQtns.get(14), i);
+                                conn.send("Question: " + randQtns.get(14), i);
                             }
                         }
                         else if(input.length() >= 7 && input.equals("Score: ")){
