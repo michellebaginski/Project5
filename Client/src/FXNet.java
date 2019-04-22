@@ -370,7 +370,7 @@ public class FXNet extends Application{
                 // notifies client that the game is over on the GUI & relays client game information to server
                 if (input.equals("end game")) {
                     triviaBox.setVisible(false);
-                    questionLbl.setText("GAME OVER! Check the server to see the scoreboard!");
+                    questionLbl.setText("Game Over! Scoreboard will go here");
                     conn.send("final points-" + conn.getClientUsername() + "=" + score);
                 }
 
