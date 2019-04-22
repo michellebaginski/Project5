@@ -23,11 +23,10 @@ public class FXNet extends Application{
     private NetworkConnection conn;
     private int portNum, numQuestions, questionNum;    // stores port number
     private String IPAddr;  // stores IP address
-    private int numPlayersOnline = 0;
+    private int numPlayersOnline, numAnswered;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
-    private Stage stage;
 
     private HashMap<String, Integer> picMap = new HashMap<String, Integer>();
     private ArrayList<Label> pictures = new ArrayList<Label>();
@@ -35,6 +34,7 @@ public class FXNet extends Application{
     private Label answerPic = new Label();
     private Label answerText = new Label();
     private Label questionLbl = new Label();
+    private VBox picBox = new VBox();
     private Button next = new Button("Next");
     int score;
     private Label myScore = new Label("My score: "+ score);
@@ -151,6 +151,7 @@ public class FXNet extends Application{
         });
 
         next.setOnAction(e->{
+            numAnswered++;
             conn.send("Send next question");
             next.setDisable(true);
         });
@@ -177,8 +178,7 @@ public class FXNet extends Application{
                 next.setVisible(true);
                 answerPic.setGraphic(pictures.get(questionNum-1).getGraphic());
                 answerText.setText(check + answerListArr.get(questionNum-1));
-                answerPic.setVisible(true);
-                answerText.setVisible(true);
+                picBox.setVisible(true);
             }
             catch (Exception e){
                 System.out.println("Some shit went wrong");
@@ -209,29 +209,17 @@ public class FXNet extends Application{
                         triviaBox.getChildren().add(answerBtns.get(i));
                     }
                     // remove GUI contents that are not required anymore and add required ones
-                    root.getChildren().remove(portPromptLbl);
-                    root.getChildren().remove(portField);
-                    root.getChildren().remove(IPPromptLbl);
-                    root.getChildren().remove(IPField);
-                    root.getChildren().remove(connect);
-                    root.getChildren().remove(usernameLbl);
-                    root.getChildren().remove(usernameField);
-                    root.getChildren().remove(messages);
+                    root.getChildren().removeAll(portPromptLbl, portField, IPPromptLbl, IPField, connect, usernameLbl, usernameField);
                     root.getChildren().add(messages);
+
                     messages.setText("Connected to server with port number " +
                             portNum + " and IP address " + IPAddr + "\n");
                     messages.appendText("Current Players: "+"\n");
-                    root.getChildren().addAll(myScore);
-                    root.getChildren().addAll(questionLbl);
-                    root.getChildren().addAll(answerPic);
-                    root.getChildren().addAll(answerText);
-                    root.getChildren().addAll(triviaBox);
-                    root.getChildren().addAll(next);
+                    root.getChildren().addAll(myScore, questionLbl, triviaBox, picBox, next);
 
                     myScore.setVisible(false);
                     triviaBox.setVisible(false);
-                    answerPic.setVisible(false);
-                    answerText.setVisible(false);
+                    picBox.setVisible(false);
                     next.setVisible(false);
                 }
                 else if (usernameApproved.equals("no")) {
@@ -281,10 +269,6 @@ public class FXNet extends Application{
         }
     }
 
-    public void setStage(Stage stage) {
-        this.stage = stage;
-    }
-
     // main method
     public static void main(String[] args) { launch(args); }
 
@@ -292,8 +276,10 @@ public class FXNet extends Application{
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Welcome to Triva Game!");
-        setStage(primaryStage);
         root = new Scene(createContent());
+        picBox.getChildren().addAll(answerPic, answerText);
+        picBox.setAlignment(Pos.CENTER);
+        picBox.setSpacing(20);
         sceneMap.put("root", root);
         primaryStage.setScene(sceneMap.get("root"));
         primaryStage.show();
@@ -357,7 +343,7 @@ public class FXNet extends Application{
                 // begin the game
                 else if (input.equals("Start game")) {
                     assignPictures();   // create an array of pictures for each answer
-                    messages.appendText("Enough players have joined,begin game!\n");
+                    messages.appendText("Enough players have joined. Begin the game!\n");
                     myScore.setVisible(true);
                     conn.send("Send next question");
                 }
@@ -365,8 +351,7 @@ public class FXNet extends Application{
                 // receive a new question from the server
                 else if (input.length() >= 10 && input.contains("Question: ")) {
                     enableBtns();
-                    answerPic.setVisible(false);
-                    answerText.setVisible(false);
+                    picBox.setVisible(false);
                     next.setVisible(false);
                     next.setDisable(false);
                     input=input.substring(10);
@@ -379,6 +364,14 @@ public class FXNet extends Application{
                     System.out.println("CORRECT ANSWER: " + correctAnswer);
                     questionNum = picMap.get(input);        // use the string to return the question number
                     System.out.println("Question Number=" + questionNum);
+                    System.out.println("NUM ANSWERED " + numAnswered);
+                }
+
+                // notifies client that the game is over on the GUI & relays client game information to server
+                if (input.equals("end game")) {
+                    triviaBox.setVisible(false);
+                    questionLbl.setText("GAME OVER! Check the server to see the scoreboard!");
+                    conn.send("final points-" + conn.getClientUsername() + "=" + score);
                 }
 
             });
