@@ -18,14 +18,15 @@ import java.util.HashMap;
 
 public class FXNet extends Application {
     private HashMap<String, Integer> ClientInfo = new HashMap<String, Integer>();  // maps client username to their ID
+    private ArrayList<Label> scoreLabels = new ArrayList<Label>();
+    private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
     private NetworkConnection conn;
     private int portNum;
     private Label clientsConnected = new Label();
     private TextArea messages = new TextArea();
     private boolean gameStarted = false;
-    private int questionNum = 1;
-
-    private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
+    private VBox scoreBoard = new VBox();
+    private Label boardTitle;
 
     // create the contents of the server GUI
     private Parent createContent() {
@@ -34,7 +35,13 @@ public class FXNet extends Application {
         messages.setPadding(new Insets(5, 5, 5, 5));
         clientsConnected.setPrefHeight(30);
 
-        // contains introductory content
+        // set up the scoreboard
+        scoreBoard.setSpacing(10);
+        boardTitle = new Label("Scores");
+        boardTitle.setVisible(false);
+        scoreBoard.getChildren().add(boardTitle);
+        scoreBoard.setAlignment(Pos.CENTER);
+
         VBox box = new VBox();
         box.setSpacing(10);
         box.setAlignment(Pos.CENTER);
@@ -71,7 +78,7 @@ public class FXNet extends Application {
         HBox OnOffBtns = new HBox(400, srvOn, srvOff);
 
         // holds the main server content
-        VBox root = new VBox(20, box, messages);
+        VBox root = new VBox(20, box, messages, scoreBoard);
         root.setPrefSize(600, 600);
 
         portField.setOnAction(event -> {
@@ -147,6 +154,11 @@ public class FXNet extends Application {
         return root;
     }
 
+    // create the label for the player's score
+    public Label makeLabel() {
+        return new Label();
+    }
+
     public static void main(String[] args){
         launch(args);
     }
@@ -174,7 +186,11 @@ public class FXNet extends Application {
             conn.closeConn();
     }
 
-    int numAnswered;//check how many people answered the question
+
+    // game state information
+    private int numAnswered;         // check how many people answered the question
+    private int questionNum = 1;     // current question number the game is on, beginning from 1
+    private final int endQnum = 6;  // the ending qNum will be the # of questions in a game + 2
 
     // creates and returns a server
     private synchronized Server createServer() {
@@ -217,9 +233,9 @@ public class FXNet extends Application {
                             }
                             // send a message to the clients when to begin the game
                             if (!gameStarted && conn.numClients == 2) {
-
-                                for (int i=0; i<2; i++) {
+                                for (int i=0; i<conn.numClients; i++) {
                                     conn.send("Start game", i);
+                                    scoreLabels.add(makeLabel());   // create a label for each player's score
                                 }
                                 gameStarted = true;
                             }
@@ -232,28 +248,48 @@ public class FXNet extends Application {
                     }
 
 
-                    else if(input.length() >= 7 && input.equals("Score: ")) {
+                    if(input.length() >= 7 && input.equals("Score: ")) {
                         if (input.substring(7).equals("1")) {
                             conn.threads.get(conn.threadID).score++; //increment the user's score
                         }
+                    }
+
+                    // parse the name and score to display the final points on the scoreboard
+                    if (input.length() >= 12 && input.substring(0, 12).equals("final points")) {
+                        int nameIndex = input.indexOf('-')+1;   // parse name
+                        int scoreIndex = input.indexOf('=');    // parse score
+                        int score = Integer.parseInt(input.substring(scoreIndex+1, input.length()));
+                        String name = input.substring(nameIndex, scoreIndex);
+
+                        // update a label with that player's game info
+                        Label l = scoreLabels.get(0);
+                        l.setText("" + name + "  | Score: " + score);
+                        boardTitle.setVisible(true);
+                        scoreBoard.getChildren().add(l);
+                        scoreLabels.remove(0);
                     }
 
                     //Send another question
                     else if(gameStarted && input.contains("Send next question")) {
                         numAnswered++;
                         System.out.println("Question num :" + questionNum);
-                        if(numAnswered == 2 && questionNum != 11){
+                        if(numAnswered == 2 && questionNum < endQnum){
 
                             for(int i = 0; i< 2; i++){ //testing with the first 10 questions with 2 players
                                 conn.send("Question: " + randQtns.get(questionNum), i);
                             }
                             questionNum++;
+
+                            // notify the clients that the game is ending so they can send their final scores
+                            if (questionNum == endQnum) {
+                                for (int i=0; i<2; i++) {
+                                    conn.send("end game", i);
+                                }
+                            }
                             numAnswered = 0;
                         }
-                        if(questionNum == 11){
-                            //do some shit with rankings
-                        }
                     }
+
                 });
             }
         });
