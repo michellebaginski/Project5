@@ -61,7 +61,7 @@ public class FXNet extends Application{
         // initialize the GUI components
         Button connect = new Button("Connect");
         connect.setTranslateX(245);
-        messages.setPrefHeight(90);
+        messages.setPrefHeight(120);
         messages.setEditable(false);
 
         TextField portField = new TextField();
@@ -74,7 +74,7 @@ public class FXNet extends Application{
 
         // declare and initialize a root
         VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
-        root.setPrefSize(600, 600);
+        root.setPrefSize(600, 630);
         root.getStylesheets().add("Background.css");
 
         // event handler for port number textField
@@ -152,7 +152,7 @@ public class FXNet extends Application{
 
         next.setOnAction(e->{
             numAnswered++;
-            conn.send("Send next question");
+            conn.send("Send question");
             next.setDisable(true);
         });
 
@@ -214,7 +214,9 @@ public class FXNet extends Application{
 
                     messages.setText("Connected to server with port number " +
                             portNum + " and IP address " + IPAddr + "\n");
-                    messages.appendText("Current Players: "+"\n");
+                    messages.appendText("To play this trivia quiz you will answer a set of 10 questions.\n");
+                    messages.appendText("All players will be ranked once every player answers all 10 question.\n");
+                    messages.appendText("Current players: \n");
                     root.getChildren().addAll(myScore, questionLbl, triviaBox, picBox, next);
 
                     myScore.setVisible(false);
@@ -345,7 +347,7 @@ public class FXNet extends Application{
                     assignPictures();   // create an array of pictures for each answer
                     messages.appendText("Enough players have joined. Begin the game!\n");
                     myScore.setVisible(true);
-                    conn.send("Send next question");
+                    conn.send("Send question");
                 }
 
                 // receive a new question from the server
@@ -371,7 +373,7 @@ public class FXNet extends Application{
                 if (input.equals("end game")) {
                     triviaBox.setVisible(false);
                     questionLbl.setText("Game Over! Scoreboard will go here");
-                    conn.send("final points-" + conn.getClientUsername() + "=" + score);
+                    conn.send("final points: " + score);
                 }
 
             });
