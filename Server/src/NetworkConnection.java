@@ -96,11 +96,7 @@ public abstract class NetworkConnection {
         private ObjectOutputStream out;
         String clientUsername;
         int score;
-
-
-        // variable to check if the player is free to challenge or occupied in a game
-        boolean isAvailable;
-
+        int rank;
 
         public ClientThread(Socket s){
             this.clientSocket = s;
