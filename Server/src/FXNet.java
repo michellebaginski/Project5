@@ -15,11 +15,13 @@ import javafx.stage.Stage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 
 public class FXNet extends Application {
     private HashMap<String, Integer> ClientInfo = new HashMap<String, Integer>();  // maps client username to their ID
     private ArrayList<Label> scoreLabels = new ArrayList<Label>();
-    private HashMap<Integer, String> randQtns = new HashMap<Integer, String>();
+    private HashMap<Integer, String> questionBank = new HashMap<Integer, String>();
+    private ArrayList<Integer> questionsUsed = new ArrayList<>();
     private NetworkConnection conn;
     private int portNum;
     private Label clientsConnected = new Label();
@@ -121,17 +123,17 @@ public class FXNet extends Application {
                 extractQs.openFile();
                 extractQs.readFile();
                 extractQs.closeFile();
-                randQtns = extractQs.getTriviaQnsHashMap();
+                questionBank = extractQs.getTriviaQnsHashMap();
 
                 //DOUBLE CHECKING HASHMAP TO CHECK IF IT WORKED, REMOVE LATER. FOR SAEMA'S REFERENCE
-                for (HashMap.Entry<Integer,String> entry : randQtns.entrySet()) {
+                for (HashMap.Entry<Integer,String> entry : questionBank.entrySet()) {
                     // the key is the question number
                     System.out.println("Key: " + entry.getKey() + " Question: " + entry.getValue());
                 }
 
                 // display the questions with their corresponding numbers
-                for (int i=1; i<=randQtns.size(); i++) {
-                    System.out.println("Q" + i + ": " + randQtns.get(i));
+                for (int i=1; i<=questionBank.size(); i++) {
+                    System.out.println("Q" + i + ": " + questionBank.get(i));
                 }
             }
             catch (Exception e){
@@ -190,7 +192,7 @@ public class FXNet extends Application {
     // game state information
     private int numAnswered;         // check how many people answered the question
     private int questionNum = 1;     // current question number the game is on, beginning from 1
-    private final int endQnum = 6;  // the ending qNum will be the # of questions in a game + 2
+    private final int endQnum = 11;  // the ending qNum will be the # of questions in a game + 2
 
     // creates and returns a server
     private synchronized Server createServer() {
@@ -232,7 +234,7 @@ public class FXNet extends Application {
                                 }
                             }
                             // send a message to the clients when to begin the game
-                            if (!gameStarted && conn.numClients == 2) {
+                            if (!gameStarted && conn.numClients == 4) {
                                 for (int i=0; i<conn.numClients; i++) {
                                     conn.send("Start game", i);
                                     scoreLabels.add(makeLabel());   // create a label for each player's score
@@ -246,53 +248,100 @@ public class FXNet extends Application {
                             conn.send("Username not approved", conn.threadID);
                         }
                     }
+                    // parse the score to display the final points on the scoreboard
+                    if (input.length() >= 14 && input.substring(0, 14).equals("final points: ")) {
+                        int score = Integer.parseInt(input.substring(14, input.length()));
+                        conn.threads.get(conn.threadID).score = score;
 
-
-                    if(input.length() >= 7 && input.equals("Score: ")) {
-                        if (input.substring(7).equals("1")) {
-                            conn.threads.get(conn.threadID).score++; //increment the user's score
+                        int numPlayersFinishedGame = 0;
+                        for(int i = 0; i < conn.numClients; i++){
+                            if(conn.threads.get(i).score != -1){
+                                numPlayersFinishedGame++;
+                            }
                         }
-                    }
+                        if(numPlayersFinishedGame == conn.numClients){
+                            determineRanks();
+                            // send the rank of each client to all clients
+                            for (int i=0; i<conn.numClients; i++) {
+                                if(i == conn.threadID){
+                                    conn.send("Your rank: " + conn.threads.get(conn.threadID).rank, conn.threadID);
+                                }
+                                else{
+                                    conn.send("Opp rank: " + conn.threads.get(i).rank + " " + conn.threads.get(i).getClientUsername(), conn.threadID);;
 
-                    // parse the name and score to display the final points on the scoreboard
-                    if (input.length() >= 12 && input.substring(0, 12).equals("final points")) {
-                        int nameIndex = input.indexOf('-')+1;   // parse name
-                        int scoreIndex = input.indexOf('=');    // parse score
-                        int score = Integer.parseInt(input.substring(scoreIndex+1, input.length()));
-                        String name = input.substring(nameIndex, scoreIndex);
+                                }
+                            }
 
+                        }
                         // update a label with that player's game info
                         Label l = scoreLabels.get(0);
-                        l.setText("" + name + "  | Score: " + score);
+                        l.setText("" + conn.getSenderUsername() + "  | Score: " + score);
                         boardTitle.setVisible(true);
                         scoreBoard.getChildren().add(l);
                         scoreLabels.remove(0);
                     }
 
                     //Send another question
-                    else if(gameStarted && input.contains("Send next question")) {
+                    else if(gameStarted && input.contains("Send question")) {
                         numAnswered++;
-                        System.out.println("Question num :" + questionNum);
-                        if(numAnswered == 2 && questionNum < endQnum){
-
-                            for(int i = 0; i< 2; i++){ //testing with the first 10 questions with 2 players
-                                conn.send("Question: " + randQtns.get(questionNum), i);
-                            }
-                            questionNum++;
-
-                            // notify the clients that the game is ending so they can send their final scores
-                            if (questionNum == endQnum) {
-                                for (int i=0; i<2; i++) {
-                                    conn.send("end game", i);
+                        Random randomGenerator = new Random();
+                        boolean regenerate = true;
+                        while(regenerate) {
+                            int questionNum = randomGenerator.nextInt(questionBank.size()) + 1;
+                            regenerate = false;
+                            for (int i = 0; i < questionsUsed.size(); i++) {
+                                if (questionNum == questionsUsed.get(i)) {
+                                    regenerate = true;
                                 }
                             }
+                        }
+                        System.out.println("Question num :" + questionNum);
+                        if(numAnswered == conn.numClients && questionNum < endQnum){
+                            for(int i = 0; i< conn.numClients; i++){ //testing with the first 10 questions with 2 players
+                                conn.send("Question: " + questionBank.get(questionNum), i);
+                            }
+                            questionNum++;
                             numAnswered = 0;
                         }
                     }
-
                 });
             }
         });
+
+    }
+
+    void determineRanks(){
+        // Score Array
+        ArrayList<Integer> scores = new ArrayList<>();
+        for(int i = 0; i < conn.numClients; i++){
+            scores.set(i, conn.threads.get(i).score);
+        }
+        // Rank Array
+        ArrayList<Double> ranks = new ArrayList<Double>();
+
+        // Sweep through all elements in Scores for each
+        // element count the number of less than and
+        // equal elements separately in r and s.
+        for (int i = 0; i < conn.numClients; i++) {
+            int r = 1, s = 1;
+
+            for (int j = 0; j < conn.numClients; j++) {
+                if (j != i && scores.get(j) < scores.get(i))
+                    r += 1;
+
+                if (j != i && scores.get(j) == scores.get(i))
+                    s += 1;
+            }
+
+            // Use formula to obtain rank
+            ranks.set(i, r + Double.valueOf(s-1) / Double.valueOf(2));
+
+        }
+
+        for(int i = 0; i < conn.numClients; i++){
+            conn.threads.get(i).rank = (int)Math.round(ranks.get(i));
+            System.out.println(conn.threads.get(i).getClientUsername() + " ranked: " + conn.threads.get(i).rank);
+        }
 
     }
 
