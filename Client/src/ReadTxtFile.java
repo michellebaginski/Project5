@@ -7,7 +7,7 @@ import java.io.*;
 public class ReadTxtFile{
 
     // key: question | value: array index of 0, 1, 2
-    private HashMap<String, ArrayList<String>> triviaQns = new HashMap<String, ArrayList<String>>();
+    private HashMap<String, ArrayList<String>> QtoAmap = new HashMap<String, ArrayList<String>>();
     private HashMap<String, Integer> questionNum = new HashMap<String, Integer>();
     private Scanner x;
     private String filename = "src/questions.txt";
@@ -20,8 +20,8 @@ public class ReadTxtFile{
     }
 
     //return the private hashmap
-    public HashMap<String,ArrayList<String>> getTriviaQnsHashMap(){
-        return this.triviaQns;
+    public HashMap<String,ArrayList<String>> getQtoAmap(){
+        return this.QtoAmap;
     }
 
     public void openFile(){
@@ -51,7 +51,7 @@ public class ReadTxtFile{
         while( x.hasNext()){
             String key = x.nextLine();
             ArrayList<String> multiAnswers = getMCAnswers();
-            triviaQns.put(key,multiAnswers);
+            QtoAmap.put(key,multiAnswers);
             questionNum.put(key, picNum);
             picNum++;
         }
