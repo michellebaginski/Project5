@@ -21,9 +21,9 @@ import java.util.Collections;
 
 public class FXNet extends Application{
     private NetworkConnection conn;
-    private int portNum, numQuestions, questionNum;    // stores port number
-    private String IPAddr;  // stores IP address
-    private int numPlayersOnline, numAnswered;
+    private int portNum, questionNum;
+    private String ip;
+    private int numPlayersOnline;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
@@ -36,11 +36,11 @@ public class FXNet extends Application{
     private Label questionLbl = new Label();
     private VBox picBox = new VBox();
     private Button next = new Button("Next");
-    int score;
-    private Label myScore = new Label("My score: "+ score);
+    int score = 0;
+    private TextArea gameBoard = new TextArea("My score: "+ score + "\n");
 
 
-    HashMap<String,ArrayList<String>> triviaQs; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
+    HashMap<String,ArrayList<String>> QtoAmap; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
     private String correctAnswer; //store the correct answer to the current trivia question
 
     ArrayList<Button> answerBtns = new ArrayList<Button>();
@@ -63,6 +63,8 @@ public class FXNet extends Application{
         connect.setTranslateX(245);
         messages.setPrefHeight(120);
         messages.setEditable(false);
+        gameBoard.setPrefHeight(30);
+        gameBoard.setEditable(false);
 
         TextField portField = new TextField();
         TextField IPField = new TextField();
@@ -74,7 +76,7 @@ public class FXNet extends Application{
 
         // declare and initialize a root
         VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
-        root.setPrefSize(600, 630);
+        root.setPrefSize(600, 600);
         root.getStylesheets().add("Background.css");
 
         // event handler for port number textField
@@ -104,7 +106,7 @@ public class FXNet extends Application{
         IPField.setOnAction(event -> {
             try {
                 // read the string entered
-                IPAddr = IPField.getText();
+                ip = IPField.getText();
                 IPPromptLbl.setDisable(true);
                 IPField.setDisable(true);
 
@@ -131,8 +133,7 @@ public class FXNet extends Application{
                 extractFile.readFile();
                 extractFile.closeFile();
                 picMap = extractFile.getQuestionNum();
-                triviaQs = extractFile.getTriviaQnsHashMap();
-                numQuestions = triviaQs.size();
+                QtoAmap = extractFile.getQtoAmap();
                 extractFile.getAnswersTxt();
                 answerListArr =extractFile.getAnswersArray();
 
@@ -145,19 +146,26 @@ public class FXNet extends Application{
                 portPromptLbl.setDisable(false);
                 portField.setDisable(false);
                 messages.setText("Could not create a client with port number "
-                        + portNum + " and IP address " + IPAddr + " Retry!");
+                        + portNum + " and IP address " + ip + " Retry!");
 
             }
         });
 
         next.setOnAction(e->{
-            numAnswered++;
-            conn.send("Send question");
-            next.setDisable(true);
+            if(questionNum == 10){
+                gameBoard.clear();
+                gameBoard.setText("Calculating rank...\n");
+                conn.send("final score: " + score);
+                root.getChildren().removeAll(triviaBox, questionLbl, picBox, next);
+            }
+            else{
+                conn.send("Send question");
+                next.setDisable(true);
+            }
         });
 
         // generic event handler to know which button the client pressed
-        EventHandler<ActionEvent> triviaBtn = event ->{
+        EventHandler<ActionEvent> answerBtn = event ->{
             disableBtns();
             Button b = (Button) event.getSource();
             String playerAnswer = b.getText();
@@ -169,7 +177,7 @@ public class FXNet extends Application{
                     check = "Correct! ";
                     conn.send("Score: 1");
                     score++;
-                    myScore.setText("My score:"+ score);
+                    gameBoard.setText("My score:"+ score);
 
                 }
                 else {
@@ -181,7 +189,7 @@ public class FXNet extends Application{
                 picBox.setVisible(true);
             }
             catch (Exception e){
-                System.out.println("Some shit went wrong");
+                System.out.println("Something went wrong");
                 e.printStackTrace();
             }
         };
@@ -205,7 +213,7 @@ public class FXNet extends Application{
                     }
                     // add game btns in a HBox and set on action with the generic button event handler
                     for(int i = 0; i < 3; i++){
-                        answerBtns.get(i).setOnAction(triviaBtn);
+                        answerBtns.get(i).setOnAction(answerBtn);
                         triviaBox.getChildren().add(answerBtns.get(i));
                     }
                     // remove GUI contents that are not required anymore and add required ones
@@ -213,13 +221,13 @@ public class FXNet extends Application{
                     root.getChildren().add(messages);
 
                     messages.setText("Connected to server with port number " +
-                            portNum + " and IP address " + IPAddr + "\n");
+                            portNum + " and IP address " + ip + "\n");
                     messages.appendText("To play this trivia quiz you will answer a set of 10 questions.\n");
                     messages.appendText("All players will be ranked once every player answers all 10 question.\n");
                     messages.appendText("Current players: \n");
-                    root.getChildren().addAll(myScore, questionLbl, triviaBox, picBox, next);
+                    root.getChildren().addAll(gameBoard, questionLbl, triviaBox, picBox, next);
 
-                    myScore.setVisible(false);
+                    gameBoard.setVisible(false);
                     triviaBox.setVisible(false);
                     picBox.setVisible(false);
                     next.setVisible(false);
@@ -255,13 +263,14 @@ public class FXNet extends Application{
     // populates an array with label pictures that will be displayed along with the correct answer for each question
     public void assignPictures() {
         String jpg = "qn.jpg";
+        int numQuestions = QtoAmap.size();
         for (int i=1; i<=numQuestions; i++) {
             String imgNum = Integer.toString(i);
             jpg = jpg.replace("n", imgNum);
             Image pic = new Image(jpg);
             ImageView v = new ImageView(pic);
-            v.setFitHeight(300);
-            v.setFitWidth(300);
+            v.setFitHeight(250);
+            v.setFitWidth(250);
             v.setPreserveRatio(true);
             Label picture = new Label();
             picture.setGraphic(v);
@@ -317,7 +326,7 @@ public class FXNet extends Application{
 
     // creates and returns a client socket connection
     private Client createClient() {
-        return new Client(IPAddr, portNum, data -> {
+        return new Client(ip, portNum, data -> {
             Platform.runLater(()->{
                 // get the string value of data
                 String input = data.toString();
@@ -345,13 +354,13 @@ public class FXNet extends Application{
                 // begin the game
                 else if (input.equals("Start game")) {
                     assignPictures();   // create an array of pictures for each answer
-                    messages.appendText("Enough players have joined. Begin the game!\n");
-                    myScore.setVisible(true);
+                    messages.appendText(numPlayersOnline + " other players have joined. Begin the game!\n");
+                    gameBoard.setVisible(true);
                     conn.send("Send question");
                 }
 
                 // receive a new question from the server
-                else if (input.length() >= 10 && input.contains("Question: ")) {
+                else if (input.length() > 10 && input.contains("Question: ")) {
                     enableBtns();
                     picBox.setVisible(false);
                     next.setVisible(false);
@@ -359,21 +368,30 @@ public class FXNet extends Application{
                     input=input.substring(10);
 
                     System.out.println("QUESTION RECEIVED: " + input);
-                    correctAnswer = triviaQs.get(input).get(0);  //record the correct answer to check if the client answered correctly later
-                    setButtonTxt(triviaQs.get(input));       //gets array from hashamp
-                    questionLbl.setText(input);
+                    correctAnswer = QtoAmap.get(input).get(0);  //record the correct answer to check if the client answered correctly later
+                    setButtonTxt(QtoAmap.get(input));       //gets array from hashamp
+                    questionLbl.setText("Q" + (questionNum + 1) + ": " + input);
                     triviaBox.setVisible(true);                 //set the box question buttons visible once receiving a question for the first time
                     System.out.println("CORRECT ANSWER: " + correctAnswer);
                     questionNum = picMap.get(input);        // use the string to return the question number
-                    System.out.println("Question Number=" + questionNum);
-                    System.out.println("NUM ANSWERED " + numAnswered);
+                    System.out.println("Question Number = " + questionNum);
+                }
+                if(input.length() > 9 && input.contains(username + "'s rank: ")){
+                    gameBoard.setPrefHeight(300);
+                    input = input.substring(username.length() + 9);
+                    input = "Your score: " + input;
+                    gameBoard.appendText("My rank: " + input + "\n");
+                }
+                else if(input.length() > 9 && input.contains("'s rank: ")){
+                    gameBoard.appendText(input);
                 }
 
-                // notifies client that the game is over on the GUI & relays client game information to server
-                if (input.equals("end game")) {
-                    triviaBox.setVisible(false);
-                    questionLbl.setText("Game Over! Scoreboard will go here");
-                    conn.send("final points: " + score);
+                if(input.length() > 10 && input.contains(username + "'s score: ")){
+                    input = input.substring(username.length() + 10);
+                    gameBoard.appendText("My score: " + input + "\n");
+                }
+                else if(input.length() > 10 && input.contains("'s score: ")){
+                    gameBoard.appendText(input);
                 }
 
             });
