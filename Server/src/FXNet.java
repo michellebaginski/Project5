@@ -259,7 +259,7 @@ public class FXNet extends Application {
                             // send the rank of each client to all clients
                             for (int i=0; i<conn.numClients; i++) {
                                 for (int j = 0; j < conn.numClients; j++) {
-                                    conn.send(conn.threads.get(i).getClientUsername() + " Score: " + conn.threads.get(i).score + "| Rank: " + conn.threads.get(i).rank +"\n", j);
+                                    conn.send(conn.threads.get(i).getClientUsername() + " Score: " + conn.threads.get(i).score + " | Rank: " + conn.threads.get(i).rank +"\n", j);
                                 }
                             }
                         }
