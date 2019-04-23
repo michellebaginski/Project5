@@ -1,4 +1,3 @@
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -194,6 +193,8 @@ public class FXNet extends Application {
     private int questionNum = 1;     // current question number the game is on, beginning from 1
     private final int endQnum = 11;  // the ending qNum will be the # of questions in a game + 2
 
+    int numPlayersFinishedGame = 0;
+
     // creates and returns a server
     private synchronized Server createServer() {
         return new Server(portNum, data-> {
@@ -252,30 +253,15 @@ public class FXNet extends Application {
                     if (input.length() >= 13 && input.substring(0, 13).equals("final score: ")) {
                         int score = Integer.parseInt(input.substring(13));
                         conn.threads.get(conn.threadID).score = score;
-
-                        int numPlayersFinishedGame = 0;
-                        for(int i = 0; i < conn.numClients; i++){
-                            if(conn.threads.get(i).score != -1){
-                                numPlayersFinishedGame++;
-                            }
-                        }
+                        numPlayersFinishedGame++;
                         if(numPlayersFinishedGame == conn.numClients){
                             determineRanks();
                             // send the rank of each client to all clients
                             for (int i=0; i<conn.numClients; i++) {
                                 for (int j = 0; j < conn.numClients; j++) {
-                                    conn.send(conn.threads.get(i).getClientUsername() + "'s score: " + conn.threads.get(i).score + "\n", j);
-                                    conn.send(conn.threads.get(i).getClientUsername() + "'s rank: " + conn.threads.get(i).rank + "\n", j);
+                                    conn.send(conn.threads.get(i).getClientUsername() + " Score: " + conn.threads.get(i).score + "| Rank: " + conn.threads.get(i).rank +"\n", j);
                                 }
                             }
-
-                            // update a label with that player's game info
-                            Label l = scoreLabels.get(0);
-                            l.setText("" + conn.getSenderUsername() + "  | Score: " + score);
-                            boardTitle.setVisible(true);
-                            scoreBoard.getChildren().add(l);
-                            scoreLabels.remove(0);
-
                         }
                         // update a label with that player's game info
                         Label l = scoreLabels.get(0);
