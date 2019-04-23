@@ -249,8 +249,8 @@ public class FXNet extends Application {
                         }
                     }
                     // parse the score to display the final points on the scoreboard
-                    if (input.length() >= 14 && input.substring(0, 14).equals("final points: ")) {
-                        int score = Integer.parseInt(input.substring(14, input.length()));
+                    if (input.length() >= 13 && input.substring(0, 13).equals("final score: ")) {
+                        int score = Integer.parseInt(input.substring(13));
                         conn.threads.get(conn.threadID).score = score;
 
                         int numPlayersFinishedGame = 0;
@@ -263,14 +263,18 @@ public class FXNet extends Application {
                             determineRanks();
                             // send the rank of each client to all clients
                             for (int i=0; i<conn.numClients; i++) {
-                                if(i == conn.threadID){
-                                    conn.send("Your rank: " + conn.threads.get(conn.threadID).rank, conn.threadID);
-                                }
-                                else{
-                                    conn.send("Opp rank: " + conn.threads.get(i).rank + " " + conn.threads.get(i).getClientUsername(), conn.threadID);;
-
+                                for (int j = 0; j < conn.numClients; j++) {
+                                    conn.send(conn.threads.get(i).getClientUsername() + "'s score: " + conn.threads.get(i).score + "\n", j);
+                                    conn.send(conn.threads.get(i).getClientUsername() + "'s rank: " + conn.threads.get(i).rank + "\n", j);
                                 }
                             }
+
+                            // update a label with that player's game info
+                            Label l = scoreLabels.get(0);
+                            l.setText("" + conn.getSenderUsername() + "  | Score: " + score);
+                            boardTitle.setVisible(true);
+                            scoreBoard.getChildren().add(l);
+                            scoreLabels.remove(0);
 
                         }
                         // update a label with that player's game info
@@ -314,7 +318,7 @@ public class FXNet extends Application {
         // Score Array
         ArrayList<Integer> scores = new ArrayList<>();
         for(int i = 0; i < conn.numClients; i++){
-            scores.set(i, conn.threads.get(i).score);
+            scores.add(i, conn.threads.get(i).score);
         }
         // Rank Array
         ArrayList<Double> ranks = new ArrayList<Double>();
@@ -332,15 +336,26 @@ public class FXNet extends Application {
                 if (j != i && scores.get(j) == scores.get(i))
                     s += 1;
             }
-
             // Use formula to obtain rank
-            ranks.set(i, r + Double.valueOf(s-1) / Double.valueOf(2));
+            ranks.add(i, r + Double.valueOf(s-1) / Double.valueOf(2));
 
         }
 
         for(int i = 0; i < conn.numClients; i++){
-            conn.threads.get(i).rank = (int)Math.round(ranks.get(i));
-            System.out.println(conn.threads.get(i).getClientUsername() + " ranked: " + conn.threads.get(i).rank);
+            int tmp = (int)Math.round(ranks.get(i));
+            if(tmp == 4){
+                conn.threads.get(i).rank = 1;
+            }
+            if(tmp == 3){
+                conn.threads.get(i).rank = 2;
+            }
+            if(tmp == 2){
+                conn.threads.get(i).rank = 3;
+            }
+            if(tmp == 1){
+                conn.threads.get(i).rank = 4;
+            }
+            System.out.println("Client " + conn.threads.get(i).getName() + " ranked: " + conn.threads.get(i).rank);
         }
 
     }
