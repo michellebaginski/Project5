@@ -376,23 +376,11 @@ public class FXNet extends Application{
                     questionNum = picMap.get(input);        // use the string to return the question number
                     System.out.println("Question Number = " + questionNum);
                 }
-                if(input.length() > 9 && input.contains(username + "'s rank: ")){
+                else if(input.length() > 9 && input.contains("Score: ")){
                     gameBoard.setPrefHeight(300);
-                    input = input.substring(username.length() + 9);
-                    input = "Your score: " + input;
-                    gameBoard.appendText("My rank: " + input + "\n");
-                }
-                else if(input.length() > 9 && input.contains("'s rank: ")){
                     gameBoard.appendText(input);
                 }
 
-                if(input.length() > 10 && input.contains(username + "'s score: ")){
-                    input = input.substring(username.length() + 10);
-                    gameBoard.appendText("My score: " + input + "\n");
-                }
-                else if(input.length() > 10 && input.contains("'s score: ")){
-                    gameBoard.appendText(input);
-                }
 
             });
         });
