@@ -37,7 +37,7 @@ public class FXNet extends Application{
     private VBox picBox = new VBox();
     private Button next = new Button("Next");
     int score = 0;
-    private TextArea gameBoard = new TextArea("My score: "+ score + "\n");
+    private TextArea gameBoard = new TextArea("Your score: "+ score + "\n");
 
 
     HashMap<String,ArrayList<String>> QtoAmap; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
@@ -175,9 +175,8 @@ public class FXNet extends Application{
                 String check = "";
                 if(playerAnswer.equals(correctAnswer)){
                     check = "Correct! ";
-                    conn.send("Score: 1");
                     score++;
-                    gameBoard.setText("My score:"+ score);
+                    gameBoard.setText("Your score:"+ score);
 
                 }
                 else {
@@ -376,12 +375,14 @@ public class FXNet extends Application{
                     questionNum = picMap.get(input);        // use the string to return the question number
                     System.out.println("Question Number = " + questionNum);
                 }
-                else if(input.length() > 9 && input.contains("Score: ")){
-                    gameBoard.setPrefHeight(300);
+                else if(input.length() > 9 && input.contains("Score: ") && input.contains("Rank: ")){
+                    gameBoard.setPrefHeight(100);
+                    if(input.contains(username)){
+                        System.out.println("this contains username : " + username);
+                        input = input.replace(username, "Your");
+                    }
                     gameBoard.appendText(input);
                 }
-
-
             });
         });
     }
