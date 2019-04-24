@@ -57,9 +57,9 @@ public class FXNet extends Application {
 
         Label greetLabel = new Label("Welcome to the Trivia Game!");
         Label instLabel = new Label("Here's how to play: ");
-        Label instLabel2 = new Label("A group of players will be asked a new question during each round with 3 choices. The players ");
-        Label instLabel3 = new Label("who get the question correct are rewarded 1 point. At the end of the game, a ranking of player");
-        Label instLabel4 = new Label("scores will be displayed.");
+        Label instLabel2 = new Label("Four players will be asked a new question during each round with 3 choices. The");
+        Label instLabel3 = new Label("players who get the question correct are rewarded 1 point. At the end of the game, ");
+        Label instLabel4 = new Label("a ranking of player scores will be displayed.");
         instrBox.getChildren().addAll(instLabel, instLabel2, instLabel3, instLabel4);
 
         Label serverLabel = new Label("Begin by connecting to a server.");
