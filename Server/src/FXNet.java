@@ -1,3 +1,4 @@
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -193,8 +194,6 @@ public class FXNet extends Application {
     private int questionNum = 1;     // current question number the game is on, beginning from 1
     private final int endQnum = 11;  // the ending qNum will be the # of questions in a game + 2
 
-    int numPlayersFinishedGame = 0;
-
     // creates and returns a server
     private synchronized Server createServer() {
         return new Server(portNum, data-> {
@@ -253,15 +252,30 @@ public class FXNet extends Application {
                     if (input.length() >= 13 && input.substring(0, 13).equals("final score: ")) {
                         int score = Integer.parseInt(input.substring(13));
                         conn.threads.get(conn.threadID).score = score;
-                        numPlayersFinishedGame++;
+
+                        int numPlayersFinishedGame = 0;
+                        for(int i = 0; i < conn.numClients; i++){
+                            if(conn.threads.get(i).score != -1){
+                                numPlayersFinishedGame++;
+                            }
+                        }
                         if(numPlayersFinishedGame == conn.numClients){
                             determineRanks();
                             // send the rank of each client to all clients
                             for (int i=0; i<conn.numClients; i++) {
                                 for (int j = 0; j < conn.numClients; j++) {
-                                    conn.send(conn.threads.get(i).getClientUsername() + " Score: " + conn.threads.get(i).score + " | Rank: " + conn.threads.get(i).rank +"\n", j);
+                                    conn.send(conn.threads.get(i).getClientUsername() + "'s score: " + conn.threads.get(i).score + "\n", j);
+                                    conn.send(conn.threads.get(i).getClientUsername() + "'s rank: " + conn.threads.get(i).rank + "\n", j);
                                 }
                             }
+
+                            // update a label with that player's game info
+                            Label l = scoreLabels.get(0);
+                            l.setText("" + conn.getSenderUsername() + "  | Score: " + score);
+                            boardTitle.setVisible(true);
+                            scoreBoard.getChildren().add(l);
+                            scoreLabels.remove(0);
+
                         }
                         // update a label with that player's game info
                         Label l = scoreLabels.get(0);
@@ -303,45 +317,51 @@ public class FXNet extends Application {
     void determineRanks(){
         // Score Array
         ArrayList<Integer> scores = new ArrayList<>();
-        for(int i = 0; i < conn.numClients; i++){
-            scores.add(i, conn.threads.get(i).score);
-        }
         // Rank Array
         ArrayList<Double> ranks = new ArrayList<Double>();
 
-        // Sweep through all elements in Scores for each
-        // element count the number of less than and
-        // equal elements separately in r and s.
-        for (int i = 0; i < conn.numClients; i++) {
-            int r = 1, s = 1;
-
-            for (int j = 0; j < conn.numClients; j++) {
-                if (j != i && scores.get(j) < scores.get(i))
-                    r += 1;
-
-                if (j != i && scores.get(j) == scores.get(i))
-                    s += 1;
-            }
-            // Use formula to obtain rank
-            ranks.add(i, r + Double.valueOf(s-1) / Double.valueOf(2));
-
+        for(int i = 0; i < conn.numClients; i++){
+            scores.add(i, conn.threads.get(i).score);
         }
 
-        for(int i = 0; i < conn.numClients; i++){
-            int tmp = (int)Math.round(ranks.get(i));
-            if(tmp == 4){
-                conn.threads.get(i).rank = 1;
+        for (int i = 0; i < conn.numClients; i++) {
+            // array that stores all scores that are greater than current score i
+            ArrayList<Integer> gt = new ArrayList<>();
+            int x = 1; // holds number of scores that are greater than the current score i
+            int y = 1;  // holds number of scores that are equal to the current score i
+            int size = 0;
+            for (int j = 0; j < conn.numClients; j++) {
+                if (j != i && scores.get(j) > scores.get(i)) {
+                    // check if the score is already there in the gt array
+                    for(int k = 0; k < size; k++){
+                        // if yes do this
+                        if(scores.get(j) == gt.get(k)){
+                            x -= 1;
+                            gt.remove(scores.get(j));
+                            size--;
+                        }
+                    }
+                    x += 1;
+                    gt.add(scores.get(j));
+                    size++;
+                }
+
+                if (j != i && scores.get(j) == scores.get(i)) {
+                    y += 1;
+                }
             }
-            if(tmp == 3){
-                conn.threads.get(i).rank = 2;
-            }
-            if(tmp == 2){
-                conn.threads.get(i).rank = 3;
-            }
-            if(tmp == 1){
-                conn.threads.get(i).rank = 4;
-            }
-            System.out.println("Client " + conn.threads.get(i).getName() + " ranked: " + conn.threads.get(i).rank);
+            // Use formula to obtain rank
+            ranks.add(i, x + Double.valueOf(y - 1) / Double.valueOf(y));
+        }
+        System.out.println("\n");
+
+        for (int i = 0; i < conn.numClients; i++) {
+            // round down the rank
+            double tmp = ranks.get(i);
+            conn.threads.get(i).rank = (int)tmp;
+            // check console output to confirm rank
+            System.out.println("Client[" + i + "] = " + conn.threads.get(i).score +
+                    " rank[" + i + "] = " + conn.threads.get(i).rank);
         }
 
     }
