@@ -106,8 +106,7 @@ public abstract class NetworkConnection {
                 ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())){
                 this.out = out;
                 clientSocket.setTcpNoDelay(true);
-                isAvailable = true;
-
+                
                 while (true) {
                     Serializable data = (Serializable) in.readObject();
                     callback.accept(data);
