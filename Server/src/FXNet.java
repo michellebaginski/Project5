@@ -11,10 +11,10 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class FXNet extends Application {
     private HashMap<String, Integer> ClientInfo = new HashMap<String, Integer>();  // maps client username to their ID
@@ -123,17 +123,6 @@ public class FXNet extends Application {
                 extractQs.readFile();
                 extractQs.closeFile();
                 questionBank = extractQs.getTriviaQnsHashMap();
-
-                //DOUBLE CHECKING HASHMAP TO CHECK IF IT WORKED, REMOVE LATER. FOR SAEMA'S REFERENCE
-                for (HashMap.Entry<Integer,String> entry : questionBank.entrySet()) {
-                    // the key is the question number
-                    System.out.println("Key: " + entry.getKey() + " Question: " + entry.getValue());
-                }
-
-                // display the questions with their corresponding numbers
-                for (int i=1; i<=questionBank.size(); i++) {
-                    System.out.println("Q" + i + ": " + questionBank.get(i));
-                }
             }
             catch (Exception e){
                 srvOn.setDisable(true);
@@ -190,9 +179,9 @@ public class FXNet extends Application {
 
 
     // game state information
-    private int numAnswered;         // check how many people answered the question
-    private int questionNum = 1;     // current question number the game is on, beginning from 1
-    private final int endQnum = 11;  // the ending qNum will be the # of questions in a game + 2
+    private int numPlayersAnswered;         // check how many people answered the question
+    private int numQAsked = 0;
+    private final int lastQnum = 10;  // the ending qNum will be the # of questions in a game + 2
 
     // creates and returns a server
     private synchronized Server createServer() {
@@ -279,31 +268,31 @@ public class FXNet extends Application {
 
                     //Send another question
                     else if(gameStarted && input.contains("Send question")) {
-                        numAnswered++;
-                        Random randomGenerator = new Random();
-                        boolean regenerate = true;
-                        while(regenerate) {
-                            int questionNum = randomGenerator.nextInt(questionBank.size()) + 1;
-                            regenerate = false;
-                            for (int i = 0; i < questionsUsed.size(); i++) {
-                                if (questionNum == questionsUsed.get(i)) {
-                                    regenerate = true;
+                        numPlayersAnswered++;
+                        if (numPlayersAnswered == conn.numClients && numQAsked <= lastQnum) {
+                            boolean regenerate = true;
+                            int questionNum = 0;
+                            while (regenerate) {
+                                questionNum = ThreadLocalRandom.current().nextInt(1, questionBank.size() + 1);
+                                regenerate = false;
+                                for (int i = 0; i < questionsUsed.size(); i++) {
+                                    if (questionNum == questionsUsed.get(i)) {
+                                        regenerate = true;
+                                    }
                                 }
                             }
-                        }
-                        System.out.println("Question num :" + questionNum);
-                        if(numAnswered == conn.numClients && questionNum < endQnum){
-                            for(int i = 0; i< conn.numClients; i++){ //testing with the first 10 questions with 2 players
+                            System.out.println("Question num chosen: " + questionNum + "\n");
+                            for (int i = 0; i < conn.numClients; i++) { //testing with the first 10 questions with 2 players
                                 conn.send("Question: " + questionBank.get(questionNum), i);
                             }
-                            questionNum++;
-                            numAnswered = 0;
+                            questionsUsed.add(questionNum);
+                            numQAsked++;
+                            numPlayersAnswered = 0;
                         }
                     }
                 });
             }
         });
-
     }
 
     void determineRanks(){
@@ -321,21 +310,18 @@ public class FXNet extends Application {
             ArrayList<Integer> gt = new ArrayList<>();
             int x = 1; // holds number of scores that are greater than the current score i
             int y = 1;  // holds number of scores that are equal to the current score i
-            int size = 0;
             for (int j = 0; j < conn.numClients; j++) {
                 if (j != i && scores.get(j) > scores.get(i)) {
                     // check if the score is already there in the gt array
-                    for(int k = 0; k < size; k++){
+                    for(int k = 0; k < gt.size(); k++){
                         // if yes do this
                         if(scores.get(j) == gt.get(k)){
                             x -= 1;
                             gt.remove(scores.get(j));
-                            size--;
                         }
                     }
                     x += 1;
                     gt.add(scores.get(j));
-                    size++;
                 }
 
                 if (j != i && scores.get(j) == scores.get(i)) {
@@ -345,15 +331,11 @@ public class FXNet extends Application {
             // Use formula to obtain rank
             ranks.add(i, x + Double.valueOf(y - 1) / Double.valueOf(y));
         }
-        System.out.println("\n");
 
         for (int i = 0; i < conn.numClients; i++) {
             // round down the rank
             double tmp = ranks.get(i);
             conn.threads.get(i).rank = (int)tmp;
-            // check console output to confirm rank
-            System.out.println("Client[" + i + "] = " + conn.threads.get(i).score +
-                    " rank[" + i + "] = " + conn.threads.get(i).rank);
         }
 
     }
