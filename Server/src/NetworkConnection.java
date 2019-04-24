@@ -95,7 +95,7 @@ public abstract class NetworkConnection {
         private Socket clientSocket;
         private ObjectOutputStream out;
         String clientUsername;
-        int score;
+        int score = -1;
         int rank;
 
         public ClientThread(Socket s){
