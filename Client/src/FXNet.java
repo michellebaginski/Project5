@@ -1,7 +1,6 @@
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -21,14 +20,14 @@ import java.util.Collections;
 
 public class FXNet extends Application{
     private NetworkConnection conn;
-    private int portNum, questionNum;
+    private int portNum, questionNum, questionsAnswered = 0;
     private String ip;
     private int numPlayersOnline;
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
 
-    private HashMap<String, Integer> picMap = new HashMap<String, Integer>();
+    private HashMap<String, Integer> QtoQNum = new HashMap<String, Integer>();
     private ArrayList<Label> pictures = new ArrayList<Label>();
     ArrayList<String> answerListArr;
     private Label answerPic = new Label();
@@ -61,7 +60,7 @@ public class FXNet extends Application{
         // initialize the GUI components
         Button connect = new Button("Connect");
         connect.setTranslateX(245);
-        messages.setPrefHeight(120);
+        messages.setPrefHeight(150);
         messages.setEditable(false);
         gameBoard.setPrefHeight(30);
         gameBoard.setEditable(false);
@@ -132,7 +131,7 @@ public class FXNet extends Application{
                 extractFile.openFile();
                 extractFile.readFile();
                 extractFile.closeFile();
-                picMap = extractFile.getQuestionNum();
+                QtoQNum = extractFile.getQuestionNum();
                 QtoAmap = extractFile.getQtoAmap();
                 extractFile.getAnswersTxt();
                 answerListArr =extractFile.getAnswersArray();
@@ -152,7 +151,7 @@ public class FXNet extends Application{
         });
 
         next.setOnAction(e->{
-            if(questionNum == 10){
+            if(questionsAnswered == 10){
                 gameBoard.clear();
                 gameBoard.setText("Calculating rank...\n");
                 conn.send("final score: " + score);
@@ -169,7 +168,6 @@ public class FXNet extends Application{
             disableBtns();
             Button b = (Button) event.getSource();
             String playerAnswer = b.getText();
-            System.out.println("I pressed "+playerAnswer);
             try{
 
                 String check = "";
@@ -273,7 +271,6 @@ public class FXNet extends Application{
             v.setPreserveRatio(true);
             Label picture = new Label();
             picture.setGraphic(v);
-            System.out.println("JPG: " + jpg);
             jpg = jpg.replace(imgNum, "n");
             pictures.add(picture);
         }
@@ -369,17 +366,20 @@ public class FXNet extends Application{
                     System.out.println("QUESTION RECEIVED: " + input);
                     correctAnswer = QtoAmap.get(input).get(0);  //record the correct answer to check if the client answered correctly later
                     setButtonTxt(QtoAmap.get(input));       //gets array from hashamp
-                    questionLbl.setText("Q" + (questionNum + 1) + ": " + input);
+                    questionLbl.setText("Q" + (++questionsAnswered) + ": " + input);
                     triviaBox.setVisible(true);                 //set the box question buttons visible once receiving a question for the first time
                     System.out.println("CORRECT ANSWER: " + correctAnswer);
-                    questionNum = picMap.get(input);        // use the string to return the question number
-                    System.out.println("Question Number = " + questionNum);
+                    questionNum = QtoQNum.get(input);        // use the string to return the question number
+
+
                 }
                 else if(input.length() > 9 && input.contains("Score: ") && input.contains("Rank: ")){
-                    gameBoard.setPrefHeight(100);
                     if(input.contains(username)){
-                        System.out.println("this contains username : " + username);
                         input = input.replace(username, "Your");
+                    }
+                    if(gameBoard.getText().equals("Calculating rank...\n")){
+                        gameBoard.setPrefHeight(100);
+                        gameBoard.clear();
                     }
                     gameBoard.appendText(input);
                 }
