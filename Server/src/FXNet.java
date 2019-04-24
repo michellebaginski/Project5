@@ -1,4 +1,3 @@
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -153,6 +152,7 @@ public class FXNet extends Application {
             }
             Platform.exit();
         });
+        root.getStylesheets().add("Background.css");
         return root;
     }
 
@@ -264,17 +264,9 @@ public class FXNet extends Application {
                             // send the rank of each client to all clients
                             for (int i=0; i<conn.numClients; i++) {
                                 for (int j = 0; j < conn.numClients; j++) {
-                                    conn.send(conn.threads.get(i).getClientUsername() + "'s score: " + conn.threads.get(i).score + "\n", j);
-                                    conn.send(conn.threads.get(i).getClientUsername() + "'s rank: " + conn.threads.get(i).rank + "\n", j);
+                                    conn.send(conn.threads.get(i).getClientUsername() + " Rank: " + conn.threads.get(i).rank + " | Score: " + conn.threads.get(i).score +"\n", j);
                                 }
                             }
-
-                            // update a label with that player's game info
-                            Label l = scoreLabels.get(0);
-                            l.setText("" + conn.getSenderUsername() + "  | Score: " + score);
-                            boardTitle.setVisible(true);
-                            scoreBoard.getChildren().add(l);
-                            scoreLabels.remove(0);
 
                         }
                         // update a label with that player's game info
