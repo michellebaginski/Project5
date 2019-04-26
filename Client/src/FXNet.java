@@ -29,23 +29,21 @@ public class FXNet extends Application{
 
     private HashMap<String, Integer> QtoQNum = new HashMap<String, Integer>();
     private ArrayList<Label> pictures = new ArrayList<Label>();
-    ArrayList<String> answerListArr;
+    private ArrayList<String> answerListArr;
     private Label answerPic = new Label();
     private Label answerText = new Label();
     private Label questionLbl = new Label();
     private VBox picBox = new VBox();
     private Button next = new Button("Next");
-    int score = 0;
+    private int score = 0;
     private TextArea gameBoard = new TextArea("Your score: "+ score + "\n");
-    private Button quitGame = new Button("Quit Game");
+    private Button exitBtn = new Button("Exit");
 
-
-
-    HashMap<String,ArrayList<String>> QtoAmap; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
+    private HashMap<String,ArrayList<String>> QtoAmap; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
     private String correctAnswer; //store the correct answer to the current trivia question
 
-    ArrayList<Button> answerBtns = new ArrayList<Button>();
-    ArrayList<Integer> indices = new ArrayList<Integer>(3); // Initialize
+    private ArrayList<Button> answerBtns = new ArrayList<Button>();
+    private ArrayList<Integer> indices = new ArrayList<Integer>(3); // Initialize
 
     // variables to hold player and opponent game information
     private String usernameApproved = "";
@@ -54,7 +52,7 @@ public class FXNet extends Application{
     // declare and initialize needed GUI components
     private TextArea messages = new TextArea();
     private Button helperBtn = new Button();
-    HBox triviaBox = new HBox(20);
+    private HBox triviaBox = new HBox(20);
 
 
     // creates a GUI scene
@@ -67,7 +65,6 @@ public class FXNet extends Application{
         gameBoard.setPrefHeight(30);
         gameBoard.setEditable(false);
 
-
         TextField portField = new TextField();
         TextField IPField = new TextField();
         IPField.setDisable(true);
@@ -76,13 +73,21 @@ public class FXNet extends Application{
         Label usernameLbl = new Label("Enter a username below");
         IPPromptLbl.setDisable(true);
 
-        HBox otherBtnsBox = new HBox(20, quitGame);
-        otherBtnsBox.setAlignment(Pos.CENTER);
-
         // declare and initialize a root
         VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
         root.setPrefSize(600, 600);
         root.getStylesheets().add("Background.css");
+
+        exitBtn.setOnAction(event -> {
+            try{
+                conn.closeConn();
+                Platform.exit();
+            }
+            catch (Exception e){
+                System.out.println("Client failed to close connect");
+                e.printStackTrace();
+            }
+        });
 
         // event handler for port number textField
         portField.setOnAction(event -> {
@@ -162,19 +167,11 @@ public class FXNet extends Application{
                 gameBoard.setText("Calculating rank...\n");
                 conn.send("final score: " + score);
                 root.getChildren().removeAll(triviaBox, questionLbl, picBox, next);
-
-                //set button at end of 10th question
-                quitGame.setVisible(true);
             }
             else{
                 conn.send("Send question");
                 next.setDisable(true);
             }
-        });
-
-        // exit client GUI
-        quitGame.setOnAction(e->{
-            Platform.exit();
         });
 
         // generic event handler to know which button the client pressed
@@ -216,7 +213,6 @@ public class FXNet extends Application{
                 else if (usernameApproved.equals("yes")) {
                     messages.setText("Press the Connect button below to connect to the server.");
 
-                    conn.setClientUsername(username); //store client's username in NetworkConnection
                     //initialize the buttons for the answers for the first time
                     for(int i = 0; i < 3; i++){
                         Button b = new Button();
@@ -236,13 +232,13 @@ public class FXNet extends Application{
                     messages.appendText("To play this trivia quiz you will answer a set of 10 questions.\n");
                     messages.appendText("All players will be ranked once every player answers all 10 question.\n");
                     messages.appendText("Current players: \n");
-                    root.getChildren().addAll(gameBoard, questionLbl, triviaBox, picBox, next, quitGame);
+                    root.getChildren().addAll(gameBoard, questionLbl, triviaBox, picBox, next,exitBtn);
 
+                    exitBtn.setVisible(false);
                     gameBoard.setVisible(false);
                     triviaBox.setVisible(false);
                     picBox.setVisible(false);
                     next.setVisible(false);
-                    quitGame.setVisible(false);
                 }
                 else if (usernameApproved.equals("no")) {
                     usernameLbl.setText("Username is taken. Try a different name. it's not working");
@@ -265,7 +261,7 @@ public class FXNet extends Application{
     }
 
     //This function will set the answer buttons to the correct multiple choice answers
-    public void setButtonTxt(ArrayList<String> answers){
+    private void setButtonTxt(ArrayList<String> answers){
         Collections.shuffle(indices);  //shuffle the indices so the answers are in a different order for every question
         for(int i = 0; i <3; i++ ){
             answerBtns.get(i).setText(answers.get(indices.get(i)));  //set the text for each button
@@ -273,7 +269,7 @@ public class FXNet extends Application{
     }
 
     // populates an array with label pictures that will be displayed along with the correct answer for each question
-    public void assignPictures() {
+    private void assignPictures() {
         String jpg = "qn.jpg";
         int numQuestions = QtoAmap.size();
         for (int i=1; i<=numQuestions; i++) {
@@ -324,12 +320,13 @@ public class FXNet extends Application{
         Platform.exit();
     }
 
-    public void enableBtns(){
+    private void enableBtns(){
         for(int i = 0; i < 3; i++){
             triviaBox.getChildren().get(i).setDisable(false);
         }
     }
-    public void disableBtns(){
+
+    private void disableBtns(){
         for(int i = 0; i < 3; i++){
             triviaBox.getChildren().get(i).setDisable(true);
         }
@@ -357,7 +354,7 @@ public class FXNet extends Application{
 
                 // server is notifying the player of other players online
                 else if( input.length() >= 19 && input.substring(0, 19).equals("New player joined: ")){
-                    input = input.substring(19, input.length());
+                    input = input.substring(19);
                     messages.appendText(input +" has joined the game.\n");
                     numPlayersOnline++;
                 }
@@ -376,8 +373,6 @@ public class FXNet extends Application{
                     picBox.setVisible(false);
                     next.setVisible(false);
                     next.setDisable(false);
-                    quitGame.setVisible(false);
-                    quitGame.setDisable(false);
                     input=input.substring(10);
 
                     System.out.println("QUESTION RECEIVED: " + input);
@@ -388,9 +383,10 @@ public class FXNet extends Application{
                     System.out.println("CORRECT ANSWER: " + correctAnswer);
                     questionNum = QtoQNum.get(input);        // use the string to return the question number
 
-
                 }
-                else if(input.length() > 9 && input.contains("Score: ") && input.contains("Rank: ")){
+                
+                //Check if the score and rank has been calculated
+                else if(input.contains("Score: ") && input.contains("Rank: ")){
                     if(input.contains(username)){
                         input = input.replace(username, "Your");
                     }
@@ -399,9 +395,16 @@ public class FXNet extends Application{
                         gameBoard.clear();
                     }
                     gameBoard.appendText(input);
+                    exitBtn.setVisible(true);
+                }
+                
+                //if another player quits the game, then prompt the user to exit the window
+                else if(input.equals("Client disconnected")){
+                    disableBtns();
+                    next.setDisable(true);
+                    gameBoard.setText("A player has left the game, please exit window.");
                 }
             });
         });
     }
-
 }
