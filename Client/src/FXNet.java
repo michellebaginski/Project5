@@ -26,6 +26,7 @@ public class FXNet extends Application{
     private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
     private Scene root;
     private TextField usernameField = new TextField();
+    private boolean isGameFinished = false;
 
     private HashMap<String, Integer> QtoQNum = new HashMap<String, Integer>();
     private ArrayList<Label> pictures = new ArrayList<Label>();
@@ -166,6 +167,7 @@ public class FXNet extends Application{
                 gameBoard.clear();
                 gameBoard.setText("Calculating rank...\n");
                 conn.send("final score: " + score);
+                isGameFinished = true;
                 root.getChildren().removeAll(triviaBox, questionLbl, picBox, next);
             }
             else{
@@ -384,7 +386,7 @@ public class FXNet extends Application{
                     questionNum = QtoQNum.get(input);        // use the string to return the question number
 
                 }
-                
+
                 //Check if the score and rank has been calculated
                 else if(input.contains("Score: ") && input.contains("Rank: ")){
                     if(input.contains(username)){
@@ -397,12 +399,14 @@ public class FXNet extends Application{
                     gameBoard.appendText(input);
                     exitBtn.setVisible(true);
                 }
-                
+
                 //if another player quits the game, then prompt the user to exit the window
                 else if(input.equals("Client disconnected")){
                     disableBtns();
                     next.setDisable(true);
-                    gameBoard.setText("A player has left the game, please exit window.");
+                    if(!isGameFinished){
+                        gameBoard.setText("A player has left the game, please exit window.");
+                    }
                 }
             });
         });
