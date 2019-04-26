@@ -56,6 +56,7 @@ public abstract class NetworkConnection {
 
     abstract protected int getPort();
 
+
     // nested class that creates a server socket and makes it listen for client connections
     class ConnThread extends Thread{
         private ServerSocket serverSocket;
@@ -116,6 +117,11 @@ public abstract class NetworkConnection {
             }
             catch (Exception e){
                 callback.accept("Client connection closed");
+                for(int i = 0; i < threads.size(); i++){
+                    if(!threads.get(i).clientSocket.isClosed()){
+                        send("Client disconnected", i);
+                    }
+                }
             }
 
         }
