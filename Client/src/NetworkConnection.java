@@ -28,16 +28,6 @@ public abstract class NetworkConnection {
         }
     }
 
-    //set username to send to the server
-    public void setClientUsername(String Username){
-        this.clientUsername = Username;
-    }
-    public String getClientUsername(String Username){
-        return this.clientUsername;
-    }
-
-
-
     // sends data to server
     public  void send(Serializable data){
         try{
@@ -58,11 +48,6 @@ public abstract class NetworkConnection {
             System.out.println("Could not start client socket with port number "
                     + getPort() + " and IP address " + getIP());
         }
-    }
-
-    // returns the client thread
-    public ClientThread getConnthread(){
-        return this.clientThread;
     }
 
     abstract protected String getIP();
