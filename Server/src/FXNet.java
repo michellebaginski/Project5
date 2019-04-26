@@ -13,7 +13,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class FXNet extends Application {
@@ -28,6 +27,7 @@ public class FXNet extends Application {
     private boolean gameStarted = false;
     private VBox scoreBoard = new VBox();
     private Label boardTitle;
+    private HBox playBox = new HBox();
 
     // create the contents of the server GUI
     private Parent createContent() {
@@ -50,7 +50,6 @@ public class FXNet extends Application {
         VBox instrBox = new VBox();
         box.setAlignment(Pos.CENTER);
         // HBox for clients connected
-        HBox playBox = new HBox();
         playBox.setSpacing(65);
         messages.setPrefHeight(60);
         messages.setEditable(false);
@@ -146,7 +145,7 @@ public class FXNet extends Application {
     }
 
     // create the label for the player's score
-    public Label makeLabel() {
+    private Label makeLabel() {
         return new Label();
     }
 
@@ -197,9 +196,10 @@ public class FXNet extends Application {
                     if (input.equals("I am connected")){
                         clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
                     }
+                    
                     //Checking if the username is already in the list
                     else if(input.length() >= 10 && input.substring(0,10).equals("Username: ")){
-                        input = input.substring(10,input.length());
+                        input = input.substring(10);
                         // check if the user name is not already takem
                         if(!ClientInfo.containsKey(input)) {
                             // add the name and id to hash map
@@ -237,8 +237,9 @@ public class FXNet extends Application {
                             conn.send("Username not approved", conn.threadID);
                         }
                     }
+                    
                     // parse the score to display the final points on the scoreboard
-                    if (input.length() >= 13 && input.substring(0, 13).equals("final score: ")) {
+                    else if (input.length() >= 13 && input.substring(0, 13).equals("final score: ")) {
                         int score = Integer.parseInt(input.substring(13));
                         conn.threads.get(conn.threadID).score = score;
 
@@ -256,7 +257,6 @@ public class FXNet extends Application {
                                     conn.send(conn.threads.get(i).getClientUsername() + " Rank: " + conn.threads.get(i).rank + " | Score: " + conn.threads.get(i).score +"\n", j);
                                 }
                             }
-
                         }
                         // update a label with that player's game info
                         Label l = scoreLabels.get(0);
@@ -266,7 +266,7 @@ public class FXNet extends Application {
                         scoreLabels.remove(0);
                     }
 
-                    //Send another question
+                    //Send a question when all users have answered the question
                     else if(gameStarted && input.contains("Send question")) {
                         numPlayersAnswered++;
                         if (numPlayersAnswered == conn.numClients && numQAsked <= lastQnum) {
@@ -282,7 +282,7 @@ public class FXNet extends Application {
                                 }
                             }
                             System.out.println("Question num chosen: " + questionNum + "\n");
-                            for (int i = 0; i < conn.numClients; i++) { //testing with the first 10 questions with 2 players
+                            for (int i = 0; i < conn.numClients; i++) {
                                 conn.send("Question: " + questionBank.get(questionNum), i);
                             }
                             questionsUsed.add(questionNum);
@@ -290,12 +290,22 @@ public class FXNet extends Application {
                             numPlayersAnswered = 0;
                         }
                     }
+
+                    //Decrement the num clients after the client has closed the connection
+                    else if(input.equals("Client connection closed")){
+                        conn.numClients = conn.numClients - 1;
+                        clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
+
+                        if(conn.numClients == 0){  //display turn off server message after the players has played one game
+                            clientsConnected.setText("All players exited, please turn off the server");
+                        }
+                    }
                 });
             }
         });
     }
 
-    void determineRanks(){
+    private void determineRanks(){
         // Score Array
         ArrayList<Integer> scores = new ArrayList<>();
         // Rank Array
@@ -315,7 +325,7 @@ public class FXNet extends Application {
                     // check if the score is already there in the gt array
                     for(int k = 0; k < gt.size(); k++){
                         // if yes do this
-                        if(scores.get(j) == gt.get(k)){
+                        if(scores.get(j).equals(gt.get(k))){
                             x -= 1;
                             gt.remove(scores.get(j));
                         }
@@ -323,13 +333,12 @@ public class FXNet extends Application {
                     x += 1;
                     gt.add(scores.get(j));
                 }
-
-                if (j != i && scores.get(j) == scores.get(i)) {
+                if (j != i && scores.get(j).equals(scores.get(i))) {
                     y += 1;
                 }
             }
             // Use formula to obtain rank
-            ranks.add(i, x + Double.valueOf(y - 1) / Double.valueOf(y));
+            ranks.add(i, x + (double) (y - 1) / (double) y);
         }
 
         for (int i = 0; i < conn.numClients; i++) {
@@ -337,7 +346,5 @@ public class FXNet extends Application {
             double tmp = ranks.get(i);
             conn.threads.get(i).rank = (int)tmp;
         }
-
     }
-
 }
