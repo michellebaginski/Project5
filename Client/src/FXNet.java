@@ -37,6 +37,8 @@ public class FXNet extends Application{
     private Button next = new Button("Next");
     int score = 0;
     private TextArea gameBoard = new TextArea("Your score: "+ score + "\n");
+    private Button quitGame = new Button("Quit Game");
+
 
 
     HashMap<String,ArrayList<String>> QtoAmap; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
@@ -65,6 +67,7 @@ public class FXNet extends Application{
         gameBoard.setPrefHeight(30);
         gameBoard.setEditable(false);
 
+
         TextField portField = new TextField();
         TextField IPField = new TextField();
         IPField.setDisable(true);
@@ -72,6 +75,9 @@ public class FXNet extends Application{
         Label IPPromptLbl = new Label("Enter IP address below");
         Label usernameLbl = new Label("Enter a username below");
         IPPromptLbl.setDisable(true);
+
+        HBox otherBtnsBox = new HBox(20, quitGame);
+        otherBtnsBox.setAlignment(Pos.CENTER);
 
         // declare and initialize a root
         VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
@@ -156,11 +162,19 @@ public class FXNet extends Application{
                 gameBoard.setText("Calculating rank...\n");
                 conn.send("final score: " + score);
                 root.getChildren().removeAll(triviaBox, questionLbl, picBox, next);
+
+                //set button at end of 10th question
+                quitGame.setVisible(true);
             }
             else{
                 conn.send("Send question");
                 next.setDisable(true);
             }
+        });
+
+        // exit client GUI
+        quitGame.setOnAction(e->{
+            Platform.exit();
         });
 
         // generic event handler to know which button the client pressed
@@ -222,12 +236,13 @@ public class FXNet extends Application{
                     messages.appendText("To play this trivia quiz you will answer a set of 10 questions.\n");
                     messages.appendText("All players will be ranked once every player answers all 10 question.\n");
                     messages.appendText("Current players: \n");
-                    root.getChildren().addAll(gameBoard, questionLbl, triviaBox, picBox, next);
+                    root.getChildren().addAll(gameBoard, questionLbl, triviaBox, picBox, next, quitGame);
 
                     gameBoard.setVisible(false);
                     triviaBox.setVisible(false);
                     picBox.setVisible(false);
                     next.setVisible(false);
+                    quitGame.setVisible(false);
                 }
                 else if (usernameApproved.equals("no")) {
                     usernameLbl.setText("Username is taken. Try a different name. it's not working");
@@ -361,6 +376,8 @@ public class FXNet extends Application{
                     picBox.setVisible(false);
                     next.setVisible(false);
                     next.setDisable(false);
+                    quitGame.setVisible(false);
+                    quitGame.setDisable(false);
                     input=input.substring(10);
 
                     System.out.println("QUESTION RECEIVED: " + input);
