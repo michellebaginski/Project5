@@ -8,8 +8,6 @@ public abstract class NetworkConnection {
 
     private ClientThread clientThread = new ClientThread();
     private Consumer<Serializable> callback;
-    public String clientUsername;
-
 
     // constructor
     public NetworkConnection(Consumer<Serializable> callback) {
@@ -31,7 +29,12 @@ public abstract class NetworkConnection {
     // sends data to server
     public  void send(Serializable data){
         try{
-            this.clientThread.out.writeObject(data);
+            if(!(clientThread.socket == null && clientThread.out == null)){
+                this.clientThread.out.writeObject(data);
+            }
+            else{
+                System.out.println("Failed to send because client is not connected to server.");
+            }
 
         } catch(Exception e){
             e.printStackTrace();
@@ -80,5 +83,4 @@ public abstract class NetworkConnection {
             }
         }
     }
-
 }
