@@ -1,6 +1,7 @@
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -11,157 +12,301 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Collections;
 
-public class FXNet extends Application {
-    private HashMap<String, Integer> ClientInfo = new HashMap<String, Integer>();  // maps client username to their ID
-    private ArrayList<Label> scoreLabels = new ArrayList<Label>();
-    private HashMap<Integer, String> questionBank = new HashMap<Integer, String>();
-    private ArrayList<Integer> questionsUsed = new ArrayList<>();
+public class FXNet extends Application{
     private NetworkConnection conn;
-    private int portNum;
-    private Label clientsConnected = new Label();
+    private int portNum, questionNum, questionsAnswered = 0;
+    private String ip;
+    private int numPlayersOnline;
+    private HashMap<String, Scene> sceneMap = new HashMap<String, Scene>();
+    private Scene root;
+    private TextField usernameField = new TextField();
+    private boolean isGameFinished = false;
+
+    private HashMap<String, Integer> QtoQNum = new HashMap<String, Integer>();
+    private ArrayList<Label> pictures = new ArrayList<Label>();
+    private ArrayList<String> answerListArr;
+    private Label answerPic = new Label();
+    private Label answerText = new Label();
+    private Label questionLbl = new Label();
+    private VBox picBox = new VBox();
+    private Button next = new Button("Next");
+    private int score = 0;
+    private TextArea gameBoard = new TextArea("Your score: "+ score + "\n");
+    private Button exitBtn = new Button("Exit");
+
+    private HashMap<String,ArrayList<String>> QtoAmap; // Question is the key and value is the multi choice answers in ArrayList. 0 index is correct answer
+    private String correctAnswer; //store the correct answer to the current trivia question
+
+    private ArrayList<Button> answerBtns = new ArrayList<Button>();
+    private ArrayList<Integer> indices = new ArrayList<Integer>(3); // Initialize
+
+    // variables to hold player and opponent game information
+    private String usernameApproved = "";
+    private String username;
+
+    // declare and initialize needed GUI components
     private TextArea messages = new TextArea();
-    private boolean gameStarted = false;
-    private VBox scoreBoard = new VBox();
-    private Label boardTitle;
-    private HBox playBox = new HBox();
+    private Button helperBtn = new Button();
+    private HBox triviaBox = new HBox(20);
 
-    // create the contents of the server GUI
+
+    // creates a GUI scene
     private Parent createContent() {
+        // initialize the GUI components
+        Button connect = new Button("Connect");
+        connect.setTranslateX(245);
+        messages.setPrefHeight(150);
         messages.setEditable(false);
-        messages.setMaxHeight(40);
-        messages.setPadding(new Insets(5, 5, 5, 5));
-        clientsConnected.setPrefHeight(30);
+        gameBoard.setPrefHeight(30);
+        gameBoard.setEditable(false);
 
-        // set up the scoreboard
-        scoreBoard.setSpacing(10);
-        boardTitle = new Label("Scores");
-        boardTitle.setVisible(false);
-        scoreBoard.getChildren().add(boardTitle);
-        scoreBoard.setAlignment(Pos.CENTER);
-
-        VBox box = new VBox();
-        box.setSpacing(10);
-        box.setAlignment(Pos.CENTER);
-        // lists the instructions
-        VBox instrBox = new VBox();
-        box.setAlignment(Pos.CENTER);
-        // HBox for clients connected
-        playBox.setSpacing(65);
-        messages.setPrefHeight(60);
-        messages.setEditable(false);
-
-        Label greetLabel = new Label("Welcome to the Trivia Game!");
-        Label instLabel = new Label("Here's how to play: ");
-        Label instLabel2 = new Label("Four players will be asked a new question during each round with 3 choices. The");
-        Label instLabel3 = new Label("players who get the question correct are rewarded 1 point. At the end of the game, ");
-        Label instLabel4 = new Label("a ranking of player scores will be displayed.");
-        instrBox.getChildren().addAll(instLabel, instLabel2, instLabel3, instLabel4);
-
-        Label serverLabel = new Label("Begin by connecting to a server.");
-        serverLabel.setPadding(new Insets(30, 0, 0, 0));
-        Label portLabel = new Label("Enter a port number to connect.");
         TextField portField = new TextField();
-        portField.setMaxWidth(130);
+        TextField IPField = new TextField();
+        IPField.setDisable(true);
+        Label portPromptLbl = new Label("Enter port number to connect to the server below");
+        Label IPPromptLbl = new Label("Enter IP address below");
+        Label usernameLbl = new Label("Enter a username below");
+        IPPromptLbl.setDisable(true);
 
-        playBox.getChildren().addAll(clientsConnected);
-        box.getChildren().addAll(greetLabel, instrBox, serverLabel, portLabel, portField);
-
-        // buttons to turn the server on and off
-        Button srvOn = new Button("Server ON");
-        Button srvOff = new Button("Server OFF");
-        srvOn.setDisable(true);
-        srvOff.setDisable(true);
-        HBox OnOffBtns = new HBox(400, srvOn, srvOff);
-
-        // holds the main server content
-        VBox root = new VBox(20, box, messages, scoreBoard);
+        // declare and initialize a root
+        VBox root = new VBox(20, portPromptLbl, portField, IPPromptLbl, IPField);
         root.setPrefSize(600, 600);
+        root.getStylesheets().add("Background.css");
 
+        exitBtn.setOnAction(event -> {
+            try{
+                conn.closeConn();
+                Platform.exit();
+            }
+            catch (Exception e){
+                System.out.println("Client failed to close connect");
+                e.printStackTrace();
+            }
+        });
+
+        // event handler for port number textField
         portField.setOnAction(event -> {
-            messages.clear();
-            messages.setDisable(false);
             try {
-                portNum = Integer.parseInt(portField.getText());    // read the text from the port textfield
+                // read the entered number
+                portNum = Integer.parseInt(portField.getText());
                 if (portNum >= 1024 && portNum <= 65535) {
-                    root.getChildren().add(OnOffBtns);
-                    srvOn.setDisable(false);
+                    portPromptLbl.setDisable(true);
                     portField.setDisable(true);
-                    portLabel.setDisable(true);
-                    messages.appendText("Press Server ON button below to create the server.");
+                    // enable IP textField to get IP address
+                    IPPromptLbl.setDisable(false);
+                    IPField.setDisable(false);
                 }
                 else {
-                    messages.appendText("The port must be between 1024 and 65535. Retry!");
+                    portPromptLbl.setText("The port must be between 1024 and 65535. Retry!");
                 }
             }
             catch (Exception e){
+                messages.setText("The port number must contain digits only. Retry!");
                 portField.clear();
-                messages.appendText("The port number must contain digits only. Retry!");
+
             }
         });
 
-        srvOn.setOnAction(event ->{
-            // turn server on
+        // event handler for IP address text field
+        IPField.setOnAction(event -> {
             try {
-                conn = createServer();
+                // read the string entered
+                ip = IPField.getText();
+                IPPromptLbl.setDisable(true);
+                IPField.setDisable(true);
+
+                root.getChildren().addAll(connect);
+
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        });
+
+        // event handler for connect button
+        connect.setOnAction(event -> {
+            // connect to server
+            try{
+                conn = createClient();
                 init();
-                messages.clear();
-                messages.appendText("A server with port number " + portNum + " is ON and is listening for client connections.\n");
-                messages.appendText("A game will be initiated once there are 4 players online.\n");
-                srvOn.setDisable(true);
-                srvOff.setDisable(false);
-                root.getChildren().add(playBox);
-                clientsConnected.setText("Number of clients connected: " + conn.numClients + "\n");
-                clientsConnected.setPadding(new Insets(5, 5, 5, 5));
+                root.getChildren().addAll(usernameLbl,usernameField);
+                connect.setDisable(true);
 
-                ReadTxtFile extractQs = new ReadTxtFile();
-                extractQs.openFile();
-                extractQs.readFile();
-                extractQs.closeFile();
-                questionBank = extractQs.getTriviaQnsHashMap();
+                //open the text file after connecting to server then extract data from the file, then close it.
+                ReadTxtFile extractFile = new ReadTxtFile();
+                extractFile.openFile();
+                extractFile.readFile();
+                extractFile.closeFile();
+                QtoQNum = extractFile.getQuestionNum();
+                QtoAmap = extractFile.getQtoAmap();
+                extractFile.getAnswersTxt();
+                answerListArr =extractFile.getAnswersArray();
+
+                for(int i = 0; i<3; i++){
+                    indices.add(i);
+                }
+
             }
-            catch (Exception e){
-                srvOn.setDisable(true);
-                messages.setDisable(true);
-                messages.appendText("Could not create server with port number " + portNum + ".");
+            catch(Exception e){
+                portPromptLbl.setDisable(false);
+                portField.setDisable(false);
+                messages.setText("Could not create a client with port number "
+                        + portNum + " and IP address " + ip + " Retry!");
+
             }
         });
 
-        srvOff.setOnAction(event -> {
-            // turn server off
+        next.setOnAction(e->{
+            if(questionsAnswered == 10){
+                gameBoard.clear();
+                gameBoard.setText("Calculating rank...\n");
+                conn.send("final score: " + score);
+                isGameFinished = true;
+                root.getChildren().removeAll(triviaBox, questionLbl, picBox, next);
+            }
+            else{
+                conn.send("Send question");
+                next.setDisable(true);
+            }
+        });
+
+        // generic event handler to know which button the client pressed
+        EventHandler<ActionEvent> answerBtn = event ->{
+            disableBtns();
+            Button b = (Button) event.getSource();
+            String playerAnswer = b.getText();
+            try{
+
+                String check = "";
+                if(playerAnswer.equals(correctAnswer)){
+                    check = "Correct! ";
+                    score++;
+                    gameBoard.setText("Your score:"+ score);
+
+                }
+                else {
+                    check = "Wrong! ";
+                }
+                next.setVisible(true);
+                answerPic.setGraphic(pictures.get(questionNum-1).getGraphic());
+                answerText.setText(check + answerListArr.get(questionNum-1));
+                picBox.setVisible(true);
+            }
+            catch (Exception e){
+                System.out.println("Something went wrong");
+                e.printStackTrace();
+            }
+        };
+
+        // event handler for usernameField
+        EventHandler<ActionEvent> usernameFieldEvent = e -> {
+            // get the username and send it to server
             try {
-                stop();
+                username = usernameField.getText();
+                if(usernameApproved.equals("")){
+                    conn.send("Username: " + username);
+                }
+                else if (usernameApproved.equals("yes")) {
+                    messages.setText("Press the Connect button below to connect to the server.");
+
+                    //initialize the buttons for the answers for the first time
+                    for(int i = 0; i < 3; i++){
+                        Button b = new Button();
+                        answerBtns.add(b);
+                    }
+                    // add game btns in a HBox and set on action with the generic button event handler
+                    for(int i = 0; i < 3; i++){
+                        answerBtns.get(i).setOnAction(answerBtn);
+                        triviaBox.getChildren().add(answerBtns.get(i));
+                    }
+                    // remove GUI contents that are not required anymore and add required ones
+                    root.getChildren().removeAll(portPromptLbl, portField, IPPromptLbl, IPField, connect, usernameLbl, usernameField);
+                    root.getChildren().add(messages);
+
+                    messages.setText("Connected to server with port number " +
+                            portNum + " and IP address " + ip + "\n");
+                    messages.appendText("To play this trivia quiz you will answer a set of 10 questions.\n");
+                    messages.appendText("All players will be ranked once every player answers all 10 question.\n");
+                    messages.appendText("Current players: \n");
+                    root.getChildren().addAll(gameBoard, questionLbl, triviaBox, picBox, next,exitBtn);
+
+                    exitBtn.setVisible(false);
+                    gameBoard.setVisible(false);
+                    triviaBox.setVisible(false);
+                    picBox.setVisible(false);
+                    next.setVisible(false);
+                }
+                else if (usernameApproved.equals("no")) {
+                    usernameLbl.setText("Username is taken. Try a different name. it's not working");
+                    usernameApproved = "";
+                }
             }
-            catch (Exception e){
-                System.out.println("Could not close server with port number " + portNum + ".");
+            catch (Exception E){
+                E.printStackTrace();
             }
-            Platform.exit();
-        });
-        root.getStylesheets().add("Background.css");
+
+
+        };
+
+        // event handler for client's username text field
+        usernameField.setOnAction(usernameFieldEvent);
+        // helper button used for username error checking
+        helperBtn.setOnAction(usernameFieldEvent);
+
         return root;
     }
 
-    // create the label for the player's score
-    private Label makeLabel() {
-        return new Label();
+    //This function will set the answer buttons to the correct multiple choice answers
+    private void setButtonTxt(ArrayList<String> answers){
+        Collections.shuffle(indices);  //shuffle the indices so the answers are in a different order for every question
+        for(int i = 0; i <3; i++ ){
+            answerBtns.get(i).setText(answers.get(indices.get(i)));  //set the text for each button
+        }
     }
 
-    public static void main(String[] args){
-        launch(args);
+    // populates an array with label pictures that will be displayed along with the correct answer for each question
+    private void assignPictures() {
+        String jpg = "qn.jpg";
+        int numQuestions = QtoAmap.size();
+        for (int i=1; i<=numQuestions; i++) {
+            String imgNum = Integer.toString(i);
+            jpg = jpg.replace("n", imgNum);
+            Image pic = new Image(jpg);
+            ImageView v = new ImageView(pic);
+            v.setFitHeight(250);
+            v.setFitWidth(250);
+            v.setPreserveRatio(true);
+            Label picture = new Label();
+            picture.setGraphic(v);
+            jpg = jpg.replace(imgNum, "n");
+            pictures.add(picture);
+        }
     }
 
-    // method to open the GUI window
+    // main method
+    public static void main(String[] args) { launch(args); }
+
+    // opens the GUI window
     @Override
     public void start(Stage primaryStage) throws Exception {
-        primaryStage.setTitle("Trivia Game");
-        primaryStage.setScene(new Scene(createContent()));
+        primaryStage.setTitle("Welcome to Triva Game!");
+        root = new Scene(createContent());
+        picBox.getChildren().addAll(answerPic, answerText);
+        picBox.setAlignment(Pos.CENTER);
+        picBox.setSpacing(20);
+        sceneMap.put("root", root);
+        primaryStage.setScene(sceneMap.get("root"));
         primaryStage.show();
+
     }
 
-    // initializes the conn server connection
+    // starts the client connection
     @Override
     public void init() throws Exception{
         if(conn != null) {
@@ -169,182 +314,101 @@ public class FXNet extends Application {
         }
     }
 
-    // closes the conn server connection
+    //stops the client connection
     @Override
     public void stop() throws Exception{
         if(conn != null)
             conn.closeConn();
+        Platform.exit();
     }
 
+    private void enableBtns(){
+        for(int i = 0; i < 3; i++){
+            triviaBox.getChildren().get(i).setDisable(false);
+        }
+    }
 
-    // game state information
-    private int numPlayersAnswered;         // check how many people answered the question
-    private int numQAsked = 0;
-    private final int lastQnum = 10;  // the ending qNum will be the # of questions in a game + 2
+    private void disableBtns(){
+        for(int i = 0; i < 3; i++){
+            triviaBox.getChildren().get(i).setDisable(true);
+        }
+    }
 
-    // creates and returns a server
-    private synchronized Server createServer() {
-        return new Server(portNum, data-> {
-            // synchronized block so that it can be used by only one thread
-            synchronized (this) {
-                Platform.runLater(() -> {
-                    // get the string value of data
-                    String input = data.toString();
-                    System.out.println("Client " + conn.threadID + ": " + input);
+    // creates and returns a client socket connection
+    private Client createClient() {
+        return new Client(ip, portNum, data -> {
+            Platform.runLater(()->{
+                // get the string value of data
+                String input = data.toString();
+                System.out.println("Server: " + input + "\n");
 
-                    // a new client connected to server
-                    if (input.equals("I am connected")){
-                        clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
+                // server approved player username
+                if(input.equals("Username approved")){
+                    usernameApproved = "yes";
+                    helperBtn.fire();
+                }
+
+                // server did not approve player username
+                else if(input.equals("Username not approved")){
+                    usernameApproved = "no";
+                    helperBtn.fire();
+                }
+
+                // server is notifying the player of other players online
+                else if( input.length() >= 19 && input.substring(0, 19).equals("New player joined: ")){
+                    input = input.substring(19);
+                    messages.appendText(input +" has joined the game.\n");
+                    numPlayersOnline++;
+                }
+
+                // begin the game
+                else if (input.equals("Start game")) {
+                    assignPictures();   // create an array of pictures for each answer
+                    messages.appendText(numPlayersOnline + " other players have joined. Begin the game!\n");
+                    gameBoard.setVisible(true);
+                    conn.send("Send question");
+                }
+
+                // receive a new question from the server
+                else if (input.length() > 10 && input.contains("Question: ")) {
+                    enableBtns();
+                    picBox.setVisible(false);
+                    next.setVisible(false);
+                    next.setDisable(false);
+                    input=input.substring(10);
+
+                    System.out.println("QUESTION RECEIVED: " + input);
+                    correctAnswer = QtoAmap.get(input).get(0);  //record the correct answer to check if the client answered correctly later
+                    setButtonTxt(QtoAmap.get(input));       //gets array from hashamp
+                    questionLbl.setText("Q" + (++questionsAnswered) + ": " + input);
+                    triviaBox.setVisible(true);                 //set the box question buttons visible once receiving a question for the first time
+                    System.out.println("CORRECT ANSWER: " + correctAnswer);
+                    questionNum = QtoQNum.get(input);        // use the string to return the question number
+
+                }
+
+                //Check if the score and rank has been calculated
+                else if(input.contains("Score: ") && input.contains("Rank: ")){
+                    if(input.contains(username)){
+                        input = input.replace(username, "Your");
                     }
-                    
-                    //Checking if the username is already in the list
-                    else if(input.length() >= 10 && input.substring(0,10).equals("Username: ")){
-                        input = input.substring(10);
-                        // check if the user name is not already takem
-                        if(!ClientInfo.containsKey(input)) {
-                            // add the name and id to hash map
-                            ClientInfo.put(input, conn.threadID);
-                            conn.send("Username approved", conn.threadID);
-                            conn.setSenderUsername(input);
-
-                            // send this player's username to other players
-                            for(int i = 0; i < conn.numClients; i++){
-                                if(i != conn.threadID){
-                                    conn.send("New player joined: " + conn.getSenderUsername(), i);
-                                }
-                                else{
-                                    // send other players' usernames to this player
-                                    for(int j = 0; j < conn.numClients; j++){
-                                        if(j != conn.threadID){
-                                            String playerName = conn.threads.get(j).getClientUsername();
-                                            conn.send("New player joined: " + playerName, conn.threadID);
-                                        }
-                                    }
-                                }
-                            }
-                            // send a message to the clients when to begin the game
-                            if (!gameStarted && conn.numClients == 4) {
-                                for (int i=0; i<conn.numClients; i++) {
-                                    conn.send("Start game", i);
-                                    scoreLabels.add(makeLabel());   // create a label for each player's score
-                                }
-                                gameStarted = true;
-                            }
-
-                        }
-                        else{
-                            // the name is taken
-                            conn.send("Username not approved", conn.threadID);
-                        }
+                    if(gameBoard.getText().equals("Calculating rank...\n")){
+                        gameBoard.setPrefHeight(100);
+                        gameBoard.clear();
                     }
-                    
-                    // parse the score to display the final points on the scoreboard
-                    else if (input.length() >= 13 && input.substring(0, 13).equals("final score: ")) {
-                        int score = Integer.parseInt(input.substring(13));
-                        conn.threads.get(conn.threadID).score = score;
+                    gameBoard.appendText(input);
+                    exitBtn.setVisible(true);
+                }
 
-                        int numPlayersFinishedGame = 0;
-                        for(int i = 0; i < conn.numClients; i++){
-                            if(conn.threads.get(i).score != -1){
-                                numPlayersFinishedGame++;
-                            }
-                        }
-                        if(numPlayersFinishedGame == conn.numClients){
-                            determineRanks();
-                            // send the rank of each client to all clients
-                            for (int i=0; i<conn.numClients; i++) {
-                                for (int j = 0; j < conn.numClients; j++) {
-                                    conn.send(conn.threads.get(i).getClientUsername() + " Rank: " + conn.threads.get(i).rank + " | Score: " + conn.threads.get(i).score +"\n", j);
-                                }
-                            }
-                        }
-                        // update a label with that player's game info
-                        Label l = scoreLabels.get(0);
-                        l.setText("" + conn.getSenderUsername() + "  | Score: " + score);
-                        boardTitle.setVisible(true);
-                        scoreBoard.getChildren().add(l);
-                        scoreLabels.remove(0);
+                //if another player quits the game, then prompt the user to exit the window
+                else if(input.equals("Client disconnected")){
+                    disableBtns();
+                    next.setDisable(true);
+                    if(!isGameFinished){
+                        gameBoard.setText("A player has left the game, please exit window.");
                     }
-
-                    //Send a question when all users have answered the question
-                    else if(gameStarted && input.contains("Send question")) {
-                        numPlayersAnswered++;
-                        if (numPlayersAnswered == conn.numClients && numQAsked <= lastQnum) {
-                            boolean regenerate = true;
-                            int questionNum = 0;
-                            while (regenerate) {
-                                questionNum = ThreadLocalRandom.current().nextInt(1, questionBank.size() + 1);
-                                regenerate = false;
-                                for (int i = 0; i < questionsUsed.size(); i++) {
-                                    if (questionNum == questionsUsed.get(i)) {
-                                        regenerate = true;
-                                    }
-                                }
-                            }
-                            System.out.println("Question num chosen: " + questionNum + "\n");
-                            for (int i = 0; i < conn.numClients; i++) {
-                                conn.send("Question: " + questionBank.get(questionNum), i);
-                            }
-                            questionsUsed.add(questionNum);
-                            numQAsked++;
-                            numPlayersAnswered = 0;
-                        }
-                    }
-
-                    //Decrement the num clients after the client has closed the connection
-                    else if(input.equals("Client connection closed")){
-                        conn.numClients = conn.numClients - 1;
-                        clientsConnected.setText("Number of players connected: " + conn.numClients + "\n");
-
-                        if(conn.numClients == 0){  //display turn off server message after the players has played one game
-                            clientsConnected.setText("All players exited, please turn off the server");
-                        }
-                    }
-                });
-            }
+                }
+            });
         });
-    }
-
-    private void determineRanks(){
-        // Score Array
-        ArrayList<Integer> scores = new ArrayList<>();
-        // Rank Array
-        ArrayList<Double> ranks = new ArrayList<Double>();
-
-        for(int i = 0; i < conn.numClients; i++){
-            scores.add(i, conn.threads.get(i).score);
-        }
-
-        for (int i = 0; i < conn.numClients; i++) {
-            // array that stores all scores that are greater than current score i
-            ArrayList<Integer> gt = new ArrayList<>();
-            int x = 1; // holds number of scores that are greater than the current score i
-            int y = 1;  // holds number of scores that are equal to the current score i
-            for (int j = 0; j < conn.numClients; j++) {
-                if (j != i && scores.get(j) > scores.get(i)) {
-                    // check if the score is already there in the gt array
-                    for(int k = 0; k < gt.size(); k++){
-                        // if yes do this
-                        if(scores.get(j).equals(gt.get(k))){
-                            x -= 1;
-                            gt.remove(scores.get(j));
-                        }
-                    }
-                    x += 1;
-                    gt.add(scores.get(j));
-                }
-                if (j != i && scores.get(j).equals(scores.get(i))) {
-                    y += 1;
-                }
-            }
-            // Use formula to obtain rank
-            ranks.add(i, x + (double) (y - 1) / (double) y);
-        }
-
-        for (int i = 0; i < conn.numClients; i++) {
-            // round down the rank
-            double tmp = ranks.get(i);
-            conn.threads.get(i).rank = (int)tmp;
-        }
     }
 }
