@@ -13,6 +13,7 @@ public abstract class NetworkConnection {
     ArrayList<ClientThread> threads = new ArrayList<>();
     int numClients = 0;     // stores number of clients connected
     int threadID = -1;    // stores data sender client-thread's name (ID)
+    boolean newGame = false; //checks if new game has started
 
     public void setSenderUsername(String name) {
         this.threads.get(threadID).clientUsername = name;
@@ -55,7 +56,7 @@ public abstract class NetworkConnection {
     }
 
     abstract protected int getPort();
-
+    
 
     // nested class that creates a server socket and makes it listen for client connections
     class ConnThread extends Thread{
@@ -66,15 +67,21 @@ public abstract class NetworkConnection {
 
                 // server is on and is listening for client connections and it will stop listening once 4 clients are connected
                 int i = 0;
-                while(i < 4){
+                while(true){
                     ClientThread t1 = new ClientThread(server.accept());
-                    threads.add(t1);
-                    numClients++;
-                    this.serverSocket = server;
-                    t1.setDaemon(true);
-                    t1.start();
-                    t1.setName(Integer.toString(numClients-1));
-                    i++;
+                    if(newGame == true){ //check if a new game just began so the server can listen to 4 more clients
+                        i = 0;
+                        newGame = false;
+                    }
+                    if(i < 4){       //add thread to arraylist if connection is made for only 4 clients
+                        threads.add(t1);
+                        numClients++;
+                        this.serverSocket = server;
+                        t1.setDaemon(true);
+                        t1.start();
+                        t1.setName(Integer.toString(numClients-1));
+                        i++;
+                    }
                 }
 
             } catch (Exception e) {
